@@ -1,96 +1,103 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
   <title>Login & Sign Up</title>
 </head>
 <body>
-  <div class="container" id="auth-container">
-    <h2 id="form-title">Sign Up</h2>
+  <h2 id="form-title">Sign Up</h2>
 
-    <div id="signup-form">
-      <input type="text" id="signup-username" placeholder="Username" required /><br><br>
-      <input type="password" id="signup-password" placeholder="Password" required /><br><br>
-      <button type="button" onclick="signup()">Sign Up</button><br><br>
-    </div>
-
-    <div id="login-form" style="display:none;">
-      <input type="text" id="login-username" placeholder="Username" required /><br><br>
-      <input type="password" id="login-password" placeholder="Password" required /><br><br>
-      <button type="button" onclick="login()">Login</button><br><br>
-    </div>
-
-    <div class="toggle" onclick="toggleForm()">Already have an account? Login</div>
-    <p id="message"></p>
+  <div id="signup-form">
+    <input type="text" id="signup-username" placeholder="Username" required />
+    <input type="password" id="signup-password" placeholder="Password" required />
+    <button type="button" id="signup-btn">Sign Up</button>
   </div>
 
-  <script>
-    function getUsers() {
-      return JSON.parse(localStorage.getItem("users")) || [];
+  <div id="login-form" style="display:none;">
+    <input type="text" id="login-username" placeholder="Username" required />
+    <input type="password" id="login-password" placeholder="Password" required />
+    <button type="button" id="login-btn">Login</button>
+  </div>
+
+  <div class="toggle" id="toggle-link">Already have an account? Login</div>
+  <p id="message"></p>
+
+<script>
+  const msgEl = document.getElementById('message');
+  const signupFormEl = document.getElementById('signup-form');
+  const loginFormEl = document.getElementById('login-form');
+  const formTitleEl = document.getElementById('form-title');
+  const toggleLinkEl = document.getElementById('toggle-link');
+
+  const USERS_KEY = 'users';
+
+  function getUsers() {
+    return JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+  }
+  function saveUsers(users) {
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  }
+  function findUser(username) {
+    return getUsers().find(u => u.username === username);
+  }
+  function findUserAuth(username, password) {
+    return getUsers().find(u => u.username === username && u.password === password);
+  }
+  function showMessage(text, color) {
+    msgEl.textContent = text || '';
+    msgEl.style.color = color || '#b00';
+  }
+
+  function ensureDefaultUsers() {
+    const users = getUsers();
+    if (!users.some(u => u.username === 'admin')) users.push({ username: 'admin', password: '1234', role: 'admin' });
+    if (!users.some(u => u.username === 'student')) users.push({ username: 'student', password: '1234', role: 'student' });
+    saveUsers(users);
+  }
+
+  function signup() {
+    const username = document.getElementById('signup-username').value.trim();
+    const password = document.getElementById('signup-password').value.trim();
+    if (!username || !password) { showMessage('Please fill in all fields.'); return; }
+    if (findUser(username)) { showMessage('Username already exists!'); return; }
+    const users = getUsers();
+    users.push({ username, password });
+    saveUsers(users);
+    showMessage('Sign-up successful! You can now log in.', 'green');
+    document.getElementById('signup-username').value = '';
+    document.getElementById('signup-password').value = '';
+    toggleForm();
+  }
+
+  function login() {
+    const username = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+    if (!username || !password) { showMessage('Please fill in all fields.'); return; }
+    const user = findUserAuth(username, password);
+    if (user) {
+      showMessage(`Welcome back, ${username}! Redirecting...`, 'green');
+      // Redirect to your learningjson file (local file path). Adjust if you move files.
+      const target = 'file:///C:/Users/KHRSTM/Documents/shit%20codes/learningjson.html';
+      setTimeout(()=> window.location.href = target, 600);
+    } else {
+      showMessage('Invalid username or password.');
     }
+  }
 
-    function saveUsers(users) {
-      localStorage.setItem("users", JSON.stringify(users));
-    }
+  function toggleForm() {
+    const showingSignup = signupFormEl.style.display !== 'none';
+    signupFormEl.style.display = showingSignup ? 'none' : 'block';
+    loginFormEl.style.display = showingSignup ? 'block' : 'none';
+    formTitleEl.textContent = showingSignup ? 'Login' : 'Sign Up';
+    toggleLinkEl.textContent = showingSignup ? "Don't have an account? Sign Up" : "Already have an account? Login";
+    showMessage('');
+  }
 
-    function signup() {
-      const username = document.getElementById("signup-username").value.trim();
-      const password = document.getElementById("signup-password").value.trim();
-      const message = document.getElementById("message");
+  document.getElementById('signup-btn').addEventListener('click', signup);
+  document.getElementById('login-btn').addEventListener('click', login);
+  toggleLinkEl.addEventListener('click', toggleForm);
 
-      if (!username || !password) {
-        message.textContent = "Please fill in all fields.";
-        return;
-      }
-
-      const users = getUsers();
-
-      if (users.find(user => user.username === username)) {
-        message.textContent = "Username already exists!";
-        return;
-      }
-
-      users.push({ username, password });
-      saveUsers(users);
-
-      message.textContent = "Sign-up successful! You can now log in.";
-      document.getElementById("signup-username").value = "";
-      document.getElementById("signup-password").value = "";
-    }
-
-    function login() {
-      const username = document.getElementById("login-username").value.trim();
-      const password = document.getElementById("login-password").value.trim();
-      const message = document.getElementById("message");
-
-      const users = getUsers();
-      const user = users.find(u => u.username === username && u.password === password);
-
-      if (user) {
-        message.textContent = `Welcome back, ${username}! 🎉`;
-      } else {
-        message.textContent = "Invalid username or password.";
-      }
-    }
-
-    function toggleForm() {
-      const signupForm = document.getElementById("signup-form");
-      const loginForm = document.getElementById("login-form");
-      const formTitle = document.getElementById("form-title");
-      const toggleText = document.querySelector(".toggle");
-      const message = document.getElementById("message");
-
-      const showingSignup = signupForm.style.display !== "none";
-
-      signupForm.style.display = showingSignup ? "none" : "block";
-      loginForm.style.display = showingSignup ? "block" : "none";
-      formTitle.textContent = showingSignup ? "Login" : "Sign Up";
-      toggleText.textContent = showingSignup
-        ? "Don't have an account? Sign Up"
-        : "Already have an account? Login";
-      message.textContent = "";
-    }
-  </script>
+  ensureDefaultUsers();
+</script>
 </body>
 </html>
