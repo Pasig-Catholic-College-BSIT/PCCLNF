@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login & Sign Up</title>
+</head>
+<body>
+  <div class="container" id="auth-container">
+    <h2 id="form-title">Sign Up</h2>
+
+    <!-- SIGN UP FORM -->
+    <div id="signup-form">
+      <input type="text" id="signup-username" placeholder="Username" required /><br><br>
+      <input type="password" id="signup-password" placeholder="Password" required /><br><br>
+      <select id="signup-role">
+        <option value="user">User</option>
+        <option value="admin">Admin</option>
+      </select><br><br>
+      <button type="button" onclick="signup()">Sign Up</button><br><br>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="login-form" style="display:none;">
+      <input type="text" id="login-username" placeholder="Username" required /><br><br>
+      <input type="password" id="login-password" placeholder="Password" required /><br><br>
+      <button type="button" onclick="login()">Login</button><br><br>
+    </div>
+
+    <div class="toggle" onclick="toggleForm()">Already have an account? Login</div>
+    <p id="message"></p>
+  </div>
+
+  <script>
+    // Get users from localStorage or return empty array
+    function getUsers() {
+      return JSON.parse(localStorage.getItem("users")) || [];
+    }
+
+    // Save users to localStorage
+    function saveUsers(users) {
+      localStorage.setItem("users", JSON.stringify(users));
+    }
+
+    // SIGN UP FUNCTION
+    function signup() {
+      const username = document.getElementById("signup-username").value.trim();
+      const password = document.getElementById("signup-password").value.trim();
+      const role = document.getElementById("signup-role").value;
+      const message = document.getElementById("message");
+
+      if (!username || !password) {
+        message.textContent = "⚠️ Please fill in all fields.";
+        message.style.color = "red";
+        return;
+      }
+
+      const users = getUsers();
+
+      // Check if username exists
+      if (users.find(user => user.username === username)) {
+        message.textContent = "⚠️ Username already exists!";
+        message.style.color = "red";
+        return;
+      }
+
+      // Add new user
+      users.push({ username, password, role });
+      saveUsers(users);
+
+      message.textContent = `✅ Sign-up successful! You can now log in as ${role}.`;
+      message.style.color = "green";
+
+      // Clear inputs
+      document.getElementById("signup-username").value = "";
+      document.getElementById("signup-password").value = "";
+    }
+
+    // LOGIN FUNCTION
+    function login() {
+      const username = document.getElementById("login-username").value.trim();
+      const password = document.getElementById("login-password").value.trim();
+      const message = document.getElementById("message");
+
+      if (!username || !password) {
+        message.textContent = "⚠️ Please enter both username and password.";
+        message.style.color = "red";
+        return;
+      }
+
+      const users = getUsers();
+      const user = users.find(u => u.username === username && u.password === password);
+
+      if (!user) {
+        message.textContent = "❌ Invalid username or password.";
+        message.style.color = "red";
+        return;
+      }
+
+      // Different messages for roles
+      if (user.role === "admin") {
+        message.innerHTML = `<span class="admin">👑 Welcome Admin ${username}!</span>`;
+      } else {
+        message.innerHTML = `<span class="user">🎉 Welcome User ${username}!</span>`;
+      }
+
+      message.style.color = "black";
+    }
+
+    // TOGGLE BETWEEN LOGIN & SIGN UP FORMS
+    function toggleForm() {
+      const signupForm = document.getElementById("signup-form");
+      const loginForm = document.getElementById("login-form");
+      const formTitle = document.getElementById("form-title");
+      const toggleText = document.querySelector(".toggle");
+      const message = document.getElementById("message");
+
+      const showingSignup = signupForm.style.display !== "none";
+
+      signupForm.style.display = showingSignup ? "none" : "block";
+      loginForm.style.display = showingSignup ? "block" : "none";
+      formTitle.textContent = showingSignup ? "Login" : "Sign Up";
+      toggleText.textContent = showingSignup
+        ? "Don't have an account? Sign Up"
+        : "Already have an account? Login";
+      message.textContent = "";
+    }
+  </script>
+</body>
+</html>
