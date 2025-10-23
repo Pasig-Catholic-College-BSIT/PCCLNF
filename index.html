@@ -30,6 +30,7 @@
   const toggleLinkEl = document.getElementById('toggle-link');
 
   const USERS_KEY = 'users';
+  const CURRENT_USER_KEY = 'currentUser';
 
   function getUsers() {
     return JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
@@ -61,7 +62,8 @@
     if (!username || !password) { showMessage('Please fill in all fields.'); return; }
     if (findUser(username)) { showMessage('Username already exists!'); return; }
     const users = getUsers();
-    users.push({ username, password });
+    // default role for signups
+    users.push({ username, password, role: 'student' });
     saveUsers(users);
     showMessage('Sign-up successful! You can now log in.', 'green');
     document.getElementById('signup-username').value = '';
@@ -75,8 +77,10 @@
     if (!username || !password) { showMessage('Please fill in all fields.'); return; }
     const user = findUserAuth(username, password);
     if (user) {
+      // Save the current user to localStorage so learningjson.html can read it
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
       showMessage(`Welcome back, ${username}! Redirecting...`, 'green');
-      // Redirect to your learningjson file (local file path). Adjust if you move files.
+      // Redirect to learningjson.html (relative path)
       const target = 'learningjson.html';
       setTimeout(()=> window.location.href = target, 600);
     } else {
@@ -101,4 +105,3 @@
 </script>
 </body>
 </html>
-

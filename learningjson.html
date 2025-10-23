@@ -1,141 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>JSON</title>
+  <meta charset="utf-8" />
+  <title>Learning JSON</title>
 </head>
 <body>
-     <h1>Student Registration Form</h1>
-     <section>
-     <form id="recordForm">
-        <label>ID:</label><br/>
-         <input type="text" id="idInput" placeholder="Enter ID" required><br><br>
-        <label>Name:<br/> <input type="text" id="nameInput" required></label><br>
-        <label>Age:<br/> <input type="number" id="ageInput" min="0" required></label><br>
-        <label>Course:<br/> <input type="text" id="courseInput" required></label><br>
-        <button id="saveBtn" onclick="saveRecord()">Save</button>
-    </form>
- 
-    <h2>
-        Saved Records
-    </h2>
- 
-    <table border="1" id="recordsTable">
-        <tr><th>ID</th>
-            <th>Name</th>
-            <th>Age</th>
-            <th>Course</th>
-            <th>Action</th>
-        </tr></table>
- 
-    </section>
-    <div id="result"></div>
- 
-    <script>
-        const db_key = "students_db_v1";
- 
-        const seedData = [
-            {id:'s1', name:'Berne Songalia', age:19, course:'BSIT'},
-            {id:'s2', name:'Ka Paul Lovin', age:35, course:'BSIT'},
-            {id:'s3', name:'Moelexter RamiRIZZ', age:56, course:'BSIT'},
-            {id:'s4', name:'Khristom Sebastian', age:18, course:'BSIT'}
-        ];
- 
-        let db = [];
- 
-        function loadDB(){
-            const raw = localStorage.getItem(db_key);
-            if(raw){
-                try{
-                    db = JSON.parse(raw);
-                }catch(e){
-                    console.error('Failed to parse DB from localStorage, resetting to seed:', e);
-                    db = [...seedData];
-                    saveDB();
-                }
-            } else {
-                db = [...seedData];
-                saveDB();
-            }
-        }
- 
-        function saveDB(){
-            localStorage.setItem(db_key, JSON.stringify(db));
-        }
- 
-        function displayRecords() {
-            const table = document.getElementById('recordsTable');
-            table.innerHTML = '<tr><th>ID</th><th>Name</th><th>Age</th><th>Course</th><th>Action</th></tr>';
-            db.forEach(r => {
-               table.innerHTML +=
-               `<tr><td>${r.id}</td>
-                <td>${r.name}</td>
-                <td>${r.age}</td>
-                <td>${r.course}</td>
-                <td>
-                    <button type="button" onclick="editRecord('${r.id}')">Edit</button>
-                    <button type="button" onclick="deleteRecord('${r.id}')">Delete</button>
-                    </td>
-                    </tr>`;
-            });
-        }
- 
-        function saveRecord(){
-            const id = document.getElementById("idInput").value;
-            const name = document.getElementById("nameInput").value;
-            const age = Number(document.getElementById("ageInput").value);
-            const course = document.getElementById("courseInput").value;
- 
-            const newRecord = {id, name, age, course};
- 
-            if(editIndex === -1){
-                db.push({id, name, age, course});
-                saveBtn.textContent = 'Save';
-            } else {
-                db[editIndex] = {id, name, age, course};
-                editIndex = -1;
-                alert('Record edited successfully!');
-            }
-           
-            saveDB();
-            displayRecords();
-            console.log('Record Saved:', newRecord);
- 
-            document.getElementById('recordForm').reset();
-        }
- 
-        function editRecord(id){
-            const idx = db.findIndex(r => r.id ===id);
-            if (idx === -1){
-                return;
-            }
- 
-            const record = db[idx];
-            idInput.value = record.id;
-            nameInput.value = record.name;
-            ageInput.value = record.age;
-            courseInput.value = record.course;
-            editIndex = idx;
-            saveBtn.textContent = 'Update';
-        }
- 
-        function deleteRecord(id){
-            const ok = confirm(`Delete record with ID ${id}`);
-            if (!ok)return;
- 
-            const idx = db.findIndex(r=>r.id===id);
-            if(idx===-1){
-                alert('Record Not Found.');
-                return;
-            }
- 
-            db.splice(idx,1);
-            saveDB();
-            displayRecords();
-       
-        }
- 
-        loadDB();
-        displayRecords();
-    </script>
+  <h1 id="greeting">Loading...</h1>
+  <button id="logout-btn">Log out</button>
+
+  <pre id="data"></pre>
+
+<script>
+  const CURRENT_USER_KEY = 'currentUser';
+  const greetingEl = document.getElementById('greeting');
+  const dataEl = document.getElementById('data');
+  const logoutBtn = document.getElementById('logout-btn');
+
+  // Read the logged-in user from localStorage
+  const raw = localStorage.getItem(CURRENT_USER_KEY);
+  if (!raw) {
+    // Not logged in — go back to login page
+    alert('You must be logged in to view this page.');
+    window.location.href = 'index.html';
+  } else {
+    const user = JSON.parse(raw);
+    greetingEl.textContent = `Hello, ${user.username}! Role: ${user.role || 'student'}`;
+
+    // Example: display a local JSON object or fetch a file
+    // If you have a learning.json file you can fetch it; here we'll show a demo object
+    const example = {
+      lessons: [
+        { id: 1, title: "Intro to HTML", completed: false },
+        { id: 2, title: "JavaScript Basics", completed: false }
+      ],
+      user
+    };
+    dataEl.textContent = JSON.stringify(example, null, 2);
+  }
+
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem(CURRENT_USER_KEY);
+    // Optionally keep users list; redirect back to login
+    window.location.href = 'index.html';
+  });
+</script>
 </body>
 </html>
