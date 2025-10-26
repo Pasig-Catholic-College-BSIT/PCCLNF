@@ -1,31 +1,32 @@
-📦 Lost and Found System
-An online platform designed to help students and staff report, list, and claim lost items efficiently. The system aims to make the process of identifying, tracking, and returning items simple, transparent, and accessible across different devices.
+# 🧭 Lost and Found System
 
-🧭 Features
-Lost Item Reporting – Users can submit details and photos of lost or found items.
-Item Listing – Displays all reported items in real time.
-Claim Request with Barcode – Each claim generates a barcode receipt for tracking and verification.
-Honesty and Accountability Check – Claimants must agree to honesty terms before submission.
-Admin Verification – Authorized personnel can approve, store, or mark items as claimed.
+## Project Title
+**Lost and Found System**  
+An online platform for managing and returning misplaced items within the school community.
 
-⚙️ Technologies Used
-HTML / CSS / JavaScript – Core frontend structure and interactivity
-JSON – Local data storage and handling
-Imgur – Image hosting for item photos
-Barcode Generator API – For claim receipts
-(Optional) GitHub Pages – For online deployment and hosting
+---
 
-🧩 Future Improvements
-User login and role-based access (Admin, Student, Finder)
-Database integration for persistent storage
-Notification system for matched or verified claims
-Responsive design for mobile users
+## Description
+The Lost and Found System is a web-based application that allows students and staff to report, post, and claim lost items efficiently.  
+It simplifies the process of identifying and retrieving lost belongings by storing item details in a central online database accessible across devices.
 
-🙌 Contributors
-Khristom Sebastian
-Bernie Songalia
-Carl Matondo
-BSIT - Pasig Catholic College
+**Problem it solves:**
+Traditional lost and found processes rely on manual recording and physical logs, making it slow and inconsistent. This system digitizes the process — improving accuracy, transparency, and accessibility.
 
-📝 License
-This project is for academic and educational purposes under the MIT License.
+---
+
+## Features
+- 🧾 **Lost Item Reporting** – Submit details and images of found or missing items.  
+- 🔍 **Item Listing** – View all reported items in real time.  
+- 🎟️ **Claim with Barcode** – Automatically generates a barcode for tracking claim requests.  
+- 🤝 **Honesty Declaration** – Claimants confirm truthful information before submitting.  
+- 🔒 **Admin Approval** – Staff can verify, approve, or close item claims.  
+- 🖼️ **Image Hosting via Imgur** – Efficient external storage for uploaded photos.  
+- 📱 **Responsive Design** – Works on both desktop and mobile browsers.  
+
+---
+
+## 9. License
+This project is licensed under the **[MIT License](https://opensource.org/licenses/MIT)**.  
+You may use, modify, and distribute this project freely with proper attribution. 
+
