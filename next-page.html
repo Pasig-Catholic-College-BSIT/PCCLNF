@@ -3,14 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Next Page</title>
+    <title>Select Role</title>
+    <link rel="stylesheet" href="css/style2.css">
 </head>
 <body>
-    <h1>Welcome to the Next Page</h1>
-    <p>This is a new page content.</p>
-    
-    <nav>
-        <a href="index.html">Back to Home</a>
-    </nav>
+    <div class="container">
+        <div class="card" onclick="navigate('admin.html')">
+            <img src="./images/3.jpg" alt="Admin">
+            <h2>ADMIN</h2>
+        </div>
+        <div class="card" onclick="navigate('teacher.html')">
+            <img src="./images/1.jpg" alt="Teacher">
+            <h2>TEACHER</h2>
+        </div>
+        <div class="card" onclick="navigate('student.html')">
+            <img src="./images/2.jpg" alt="Student">
+            <h2>STUDENT</h2>
+        </div>
+    </div>
+    <script src="js/roles.js"></script>
 </body>
 </html>
