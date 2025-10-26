@@ -5,3 +5,12 @@ document.addEventListener('DOMContentLoaded', function() {
         window.location.href = 'next-page.html'; // Uncomment to navigate to next page
     });
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('tap-area').addEventListener('click', function() {
+        document.body.style.opacity = '0';
+        setTimeout(() => {
+            window.location.href = 'next-page.html';
+        }, 500);
+    });
+});
