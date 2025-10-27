@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (tapArea) {
     tapArea.addEventListener(
       'click',
-      throttle(() => fadeAndNavigate('/webpages/next-page.html'), 800)
+      throttle(() => fadeAndNavigate('webpages/next-page.html'), 800)
     );
   }
 
