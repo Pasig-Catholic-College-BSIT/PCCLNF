@@ -3,96 +3,60 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>WELCOME TO PASIG CATHOLIC COLLEGE - LOST AND FOUND</title>
+  <title>Lost and Found Management System</title>
   <link rel="icon" href="../images/redpaul.png" type="image/png">
 </head>
-<body style="font-family:Segoe UI,Arial,sans-serif; margin:0; padding:1rem; background:#f6f7fb; position:relative;">
+<body style="font-family:Segoe UI,Arial,sans-serif; margin:0; padding:1rem; background:#f6f7fb;">
 
-  <!-- Header -->
-  <h1 style="text-align:center; margin:0 0 1rem 0;">WELCOME TO PASIG CATHOLIC COLLEGE - LOST AND FOUND</h1>
-
-  <!-- Search -->
-  <div style="display:flex; gap:.5rem; align-items:center; justify-content:center; margin-bottom:1rem;">
-    <input id="search-input" type="search" placeholder="Search listings" style="width:40%; padding:.5rem;">
-  </div>
-
-  <!-- Tabs -->
-  <div style="text-align:center; margin-bottom:1rem;">
-    <button id="tab-lost" type="button">LOST</button>
-    <button id="tab-found" type="button">FOUND</button>
-    <button id="tab-claimed" type="button">CLAIMED ITEMS</button>
-  </div>
-
-  <!-- Controls -->
-  <div id="tab-controls" style="display:flex; gap:.75rem; align-items:center; justify-content:center; flex-wrap:wrap; margin-bottom:1rem;">
-    <label>Category:
-      <select id="filter-category">
-        <option value="all">All</option>
-        <option value="Personal Items">Personal Items</option>
-        <option value="Electronics">Electronics</option>
-        <option value="Documents">Documents</option>
-        <option value="School / Office Supplies">School / Office Supplies</option>
-        <option value="Miscellaneous">Miscellaneous</option>
-      </select>
-    </label>
-
-    <label>Status:
-      <select id="filter-status">
-        <option value="all">All Status</option>
-        <option value="Pending">Pending</option>
-        <option value="Unclaimed">Unclaimed</option>
-        <option value="Claimed">Claimed</option>
-        <option value="Returned">Returned</option>
-      </select>
-    </label>
-
-    <label>Sort:
-      <select id="sort-order">
-        <option value="newest">Newest → Oldest</option>
-        <option value="oldest">Oldest → Newest</option>
-      </select>
-    </label>
-
-    <button id="btn-add-listing" type="button">Add New Listing</button>
-  </div>
-
-  <!-- Panes (cards) -->
-  <main style="padding:0 1rem;">
-    <div id="pane-lost" data-type="lost">
-      <h3>Lost Items</h3>
-      <div id="cards-lost" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
+  <header style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <a href="../pages/admin.html" style="text-decoration:none;">
+        <button type="button">Admin View</button>
+      </a>
     </div>
 
-    <div id="pane-found" data-type="found" style="display:none;">
-      <h3>Found Items</h3>
-      <div id="cards-found" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
-    </div>
+    <h2 style="margin:0">WELCOME TO PASIG CATHOLIC COLLEGE - LOST AND FOUND</h2>
 
-    <div id="pane-claimed" data-type="claimed" style="display:none;">
-      <h3>Claimed Items</h3>
-      <div id="cards-claimed" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
+    <div>
+      <button id="btn-add-listing">Add New Listing</button>
     </div>
+  </header>
+
+  <section style="margin-top:1rem; display:flex; gap:1rem; align-items:center;">
+    <input id="search-input" type="search" placeholder="Search by keyword..." style="flex:1; padding:.5rem;">
+
+    <select id="filter-category" style="padding:.4rem;">
+      <option value="all">All Categories</option>
+      <option>Personal Items</option>
+      <option>Electronics</option>
+      <option>Documents</option>
+      <option>School / Office Supplies</option>
+      <option>Miscellaneous</option>
+    </select>
+
+    <select id="sort-order" style="padding:.4rem;">
+      <option value="newest">Newest → Oldest</option>
+      <option value="oldest">Oldest → Newest</option>
+    </select>
+  </section>
+
+  <main style="margin-top:1rem;">
+    <h3>Lost Items</h3>
+    <div id="cards-lost" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
+
+    <h3 style="margin-top:2rem">Found Items</h3>
+    <div id="cards-found" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
+
+    <h3 style="margin-top:2rem">Claimed Items</h3>
+    <div id="cards-claimed" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
   </main>
 
-  <!-- Modal overlay -->
+  <!-- modal overlay -->
   <div id="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:1000;">
-    <div id="modal" style="background:#fff; width:min(900px,96%); margin:3rem auto; padding:1rem; border-radius:6px; max-height:80vh; overflow:auto;">
+    <div id="modal" style="background:#fff; width:min(760px,96%); margin:3rem auto; padding:1rem; border-radius:6px; max-height:80vh; overflow:auto;">
     </div>
   </div>
 
   <script src="../js/faculty-student.js"></script>
-  <script>
-    // simple tab wiring to mirror admin layout behavior (keeps existing faculty-student.js logic working)
-    (function(){
-      function showPane(kind){
-        ['lost','found','claimed'].forEach(k=>{
-          document.getElementById('pane-' + k).style.display = (k === kind) ? '' : 'none';
-        });
-      }
-      document.getElementById('tab-lost').addEventListener('click', ()=> showPane('lost'));
-      document.getElementById('tab-found').addEventListener('click', ()=> showPane('found'));
-      document.getElementById('tab-claimed').addEventListener('click', ()=> showPane('claimed'));
-    })();
-  </script>
 </body>
 </html>
