@@ -26,7 +26,7 @@ Traditional lost and found processes rely on manual recording and physical logs,
 
 ---
 
-## 9. License
+## License
 This project is licensed under the **[MIT License](https://opensource.org/licenses/MIT)**.  
 You may use, modify, and distribute this project freely with proper attribution. 
 
