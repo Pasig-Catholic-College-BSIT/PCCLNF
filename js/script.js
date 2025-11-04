@@ -56,3 +56,49 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// Store admin data in localStorage as JSON
+function getAdmins() {
+  return JSON.parse(localStorage.getItem("admins") || "[]");
+}
+
+function saveAdmins(admins) {
+  localStorage.setItem("admins", JSON.stringify(admins));
+}
+
+// Signup handler
+document.getElementById("signupForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const username = signupUsername.value.trim();
+  const email = signupEmail.value.trim();
+  const password = signupPassword.value;
+
+  const admins = getAdmins();
+  const exists = admins.find(a => a.username === username || a.email === email);
+
+  if (exists) {
+    message.textContent = "Username or email already exists.";
+    return;
+  }
+
+  admins.push({ username, email, password });
+  saveAdmins(admins);
+  message.textContent = "Signup successful!";
+});
+
+// Login handler
+document.getElementById("loginForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const username = loginUsername.value.trim();
+  const password = loginPassword.value;
+
+  const admins = getAdmins();
+  const admin = admins.find(a => a.username === username && a.password === password);
+
+  if (admin) {
+    message.textContent = `Welcome, ${admin.username}!`;
+    // Redirect or show admin dashboard here
+  } else {
+    message.textContent = "Invalid login credentials.";
+  }
+});
