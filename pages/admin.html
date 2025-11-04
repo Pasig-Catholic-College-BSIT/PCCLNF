@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lost and Found Management System</title>
+  <link rel="icon" href="../images/redpaul.png" type="image/png">
+  <!-- No CSS/design — plain structure only -->
+</head>
+<body style="text-align:center">
+  <!-- Header -->
+  <h1>WELCOME TO PASIG CATHOLIC COLLEGE - LOST AND FOUND</h1>
+
+  <!-- Controls: Search -->
+  <div>
+    <input id="search-input" type="search" placeholder="Search listings (title, description, location, reporter)"/>
+  </div>
+
+  <!-- Tabs -->
+  <div>
+    <button id="tab-lost" type="button">LOST</button>
+    <button id="tab-found" type="button">FOUND</button>
+    <button id="tab-claimed" type="button">CLAIMED ITEMS</button>
+  </div>
+
+  <!-- Controls per-tab: category dropdown and sort + admin buttons -->
+  <div id="tab-controls">
+    <label>Category:
+      <select id="filter-category">
+        <option value="all">All</option>
+        <option value="electronics">Electronics</option>
+        <option value="documents">Documents</option>
+        <option value="clothing">Clothing</option>
+        <option value="other">Other</option>
+      </select>
+    </label>
+
+    <label>Sort:
+      <select id="sort-order">
+        <option value="newest">Newest → Oldest</option>
+        <option value="oldest">Oldest → Newest</option>
+      </select>
+    </label>
+
+    <button id="btn-add-listing" type="button">Add Listing</button>
+    <button id="btn-review-pending" type="button">Review Pending Listings</button>
+  </div>
+
+  <!-- Tables with updated headers per request -->
+  <div id="tables">
+    <div id="pane-lost" data-type="lost">
+      <table id="table-lost" border="1" width="100%" style="text-align:center">
+        <thead>
+          <tr>
+            <th>Item ID</th>
+            <th>Image</th>
+            <th>Category</th>
+            <th>Date Lost</th>
+            <th>Lost At</th>
+            <th>Reported By</th>
+            <th>Status</th>
+            <th>View Details</th>
+            <th>Actions (Update, Delete)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="pane-found" data-type="found" style="display:none">
+      <table id="table-found" border="1" width="100%" style="text-align:center">
+        <thead>
+          <tr>
+            <th>Item ID</th>
+            <th>Image</th>
+            <th>Category</th>
+            <th>Date Found</th>
+            <th>Found At</th>
+            <th>Currently Stored At</th>
+            <th>Status</th>
+            <th>View Details</th>
+            <th>Actions (Update, Delete)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div id="pane-claimed" data-type="claimed" style="display:none">
+      <table id="table-claimed" border="1" width="100%" style="text-align:center">
+        <thead>
+          <tr>
+            <th>Item ID</th>
+            <th>Image</th>
+            <th>Category</th>
+            <th>Date Claimed</th>
+            <th>Claimed By</th>
+            <th>Claimed From</th>
+            <th>Status</th>
+            <th>View Details</th>
+            <th>Actions (Update, Delete)</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modals (hidden containers toggled by JS) -->
+  <div id="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.2);">
+    <div id="modal" style="background:#fff; margin:3rem; padding:1rem;">
+      <!-- injected content -->
+    </div>
+  </div>
+
+  <!-- Script -->
+  <script src="../js/admin.js"></script>
+</body>
+</html>
