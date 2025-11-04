@@ -16,7 +16,7 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
-    background: url('./images/pccbg.jpg') no-repeat center center fixed;
+    background: url('../images/pccbg.jpg') no-repeat center center fixed;
     background-size: cover;
     opacity: 1;
     transition: opacity .6s ease;
