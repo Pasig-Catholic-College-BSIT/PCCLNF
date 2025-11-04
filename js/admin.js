@@ -1,451 +1,736 @@
-// Admin dashboard prototype — structure + basic functionality.
-// - Uses window.localStorage to persist JSON objects:
-//    lostItems, foundItems, claimedItems, pendingListings
-// - Provides: renderTable(type), addListing(role,type,data),
-//   reviewPendingListings(), viewDetails(id,type), claimItem(id)
-// - Minimal UI (no CSS). Console logs for actions not fully implemented.
+/*
+  Admin UI behaviour for admin.html
+  - Loads JSON datasets (falls back to localStorage for persistence)
+  - Renders LOST / FOUND / CLAIMED tables
+  - Search, category filter, sort
+  - Add Listing modal (lost / found)
+  - View Details modal
+  - Update Listing modal
+  - Delete with typed-ID confirmation
+  - Pending review modal with Approve / Reject / Edit
+*/
 
-// ----------------------------
-// Sample data (used if no data in localStorage)
-// ----------------------------
-const SAMPLE_LOST = [
-  { id: genId('lost'), title: 'Red Umbrella', description: 'Small red umbrella', category: 'other', location: 'Library', reporter: 'John D', timestamp: Date.now() - 1000 * 60 * 60 * 24, status: 'Unfound' },
-  { id: genId('lost'), title: 'Student ID - 2021', description: 'ID card with student number', category: 'documents', location: 'Cafeteria', reporter: 'Mary P', timestamp: Date.now() - 1000 * 60 * 60 * 5, status: 'Unfound' }
-];
+const DATA_PATH = '../data/';
+const FILES = {
+  lost: 'lostItems.json',
+  found: 'foundItems.json',
+  claimed: 'claimedItems.json',
+  pending: 'pendingList.json'
+};
 
-const SAMPLE_FOUND = [
-  { id: genId('found'), title: 'Black Wallet', description: 'Contains some cash', category: 'other', location: 'Main Gate', reporter: 'Security', timestamp: Date.now() - 1000 * 60 * 60 * 72, status: 'Unclaimed', storedAt: 'Main Office' }
-];
+let store = {
+  lost: [],
+  found: [],
+  claimed: [],
+  pending: []
+};
 
-const SAMPLE_CLAIMED = [
-  { id: 'C-' + genId('lost'), title: 'Blue Scarf', description: 'Wool scarf', category: 'clothing', location: 'Gym', reporter: 'Admin', claimedBy: 'Elena', claimedAt: Date.now() - 1000 * 60 * 60 * 200, status: 'Verified' }
-];
-
-const SAMPLE_PENDING = [
-  // Items posted by faculty/student pending admin approval
-  { id: genId('lost'), type: 'lost', title: 'AirPods', description: 'white earbuds', category: 'electronics', location: 'Room 101', reporter: 'Student A', timestamp: Date.now() - 1000 * 60 * 60, status: 'Unfound' }
-];
-
-// ----------------------------
-// Storage helpers
-// ----------------------------
-function saveJSON(key, obj) {
-  window.localStorage.setItem(key, JSON.stringify(obj || []));
+/* ======= Pending helpers (internal PID) ======= */
+function ensurePendingPid(item) {
+  if (!item) return;
+  if (!item._pid) {
+    item._pid = 'PID-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).slice(2,6).toUpperCase();
+  }
+  return item._pid;
+}
+function findPendingIndexByPid(pid) {
+  return store.pending.findIndex(p => p._pid === pid);
 }
 
-function loadJSON(key) {
+/* ======= Utilities & Data Layer ======= */
+
+// Normalize date parsing for sorting
+function parseDateFlexible(item) {
+  const keys = ['dateLost', 'dateFound', 'dateClaimed', 'postedAt', 'datePosted', 'date', 'submissionDate'];
+  for (const k of keys) {
+    if (item[k]) return new Date(item[k]);
+  }
+  if (item.createdAt) return new Date(item.createdAt);
+  if (item.lastUpdated) return new Date(item.lastUpdated);
+  return new Date(0);
+}
+
+function formatDateOnly(val) {
+  if (!val) return '—';
+  const d = (val instanceof Date) ? val : new Date(val);
+  if (isNaN(d)) return '—';
+  return d.toLocaleDateString();
+}
+
+function genId(kind) {
+  const prefix = kind === 'lost' ? 'L-' : kind === 'found' ? 'F-' : 'C-';
+  const ts = Date.now().toString(36).toUpperCase();
+  return `${prefix}${ts}`;
+}
+
+function saveToLocal(key, arr) {
+  try { localStorage.setItem(`pcclnf_${key}`, JSON.stringify(arr)); } catch (e) { /* ignore */ }
+}
+function loadFromLocal(key) {
   try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return null;
-    return JSON.parse(raw);
+    const v = localStorage.getItem(`pcclnf_${key}`);
+    return v ? JSON.parse(v) : null;
+  } catch (e) { return null; }
+}
+
+async function fetchJsonFile(name) {
+  try {
+    const res = await fetch(`${DATA_PATH}${name}`, {cache: "no-store"});
+    if (!res.ok) throw new Error('fetch failed');
+    return await res.json();
   } catch (e) {
-    console.error('JSON load error for', key, e);
     return null;
   }
 }
 
-// Initialize storage if empty
-function initStorageIfEmpty() {
-  if (!loadJSON('lostItems')) saveJSON('lostItems', SAMPLE_LOST);
-  if (!loadJSON('foundItems')) saveJSON('foundItems', SAMPLE_FOUND);
-  if (!loadJSON('claimedItems')) saveJSON('claimedItems', SAMPLE_CLAIMED);
-  if (!loadJSON('pendingListings')) saveJSON('pendingListings', SAMPLE_PENDING);
+async function loadAllData() {
+  for (const k of ['lost', 'found', 'claimed', 'pending']) {
+    const local = loadFromLocal(k);
+    if (local) {
+      store[k] = local;
+    } else {
+      const data = await fetchJsonFile(FILES[k]);
+      store[k] = Array.isArray(data) ? data : [];
+      saveToLocal(k, store[k]);
+    }
+  }
+  // ensure pending items have stable internal _pid (not a public id)
+  store.pending.forEach(ensurePendingPid);
+  saveToLocal('pending', store.pending);
 }
 
-// ----------------------------
-// Utility helpers
-// ----------------------------
-function genId(kind) {
-  // kind: 'lost' | 'found' | undefined
-  const rand = Math.random().toString(36).slice(2, 9).toUpperCase();
-  if (kind === 'lost') return 'L' + rand;
-  if (kind === 'found') return 'F' + rand;
-  return rand;
+/* ======= Rendering ======= */
+
+function q(sel, root = document) { return root.querySelector(sel); }
+function qa(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
+
+function thumbnailHtml(item) {
+  if (item.image) {
+    const src = item.image.startsWith('data:') ? item.image : `../images/${item.image}`;
+    return `<img src="${src}" alt="img" width="60" style="object-fit:cover">`;
+  }
+  return '—';
 }
 
-function fmtDate(ts) {
-  if (!ts) return '';
-  const d = new Date(ts);
-  // return date only (calendar)
+function formatDateForColumn(item) {
+  const d = parseDateFlexible(item);
+  if (isNaN(d)) return '—';
   return d.toLocaleDateString();
 }
 
-// ----------------------------
-// Core functions required
-// ----------------------------
+function getReporterOrStored(item) {
+  return item.reporter || item.foundBy || item.claimedBy || item.storedAt || '—';
+}
 
-function renderTable(type) {
-  // type: 'lost' | 'found' | 'claimed'
-  const map = { lost: 'lostItems', found: 'foundItems', claimed: 'claimedItems' };
-  const key = map[type];
-  const data = loadJSON(key) || [];
-  const tbody = document.querySelector(`#table-${type} tbody`);
-  if (!tbody) return;
+function renderTable(kind) {
+  const pane = q(`#pane-${kind}`);
+  const tbody = pane.querySelector('tbody');
+  tbody.innerHTML = '';
 
-  // filters
-  const search = (document.getElementById('search-input')?.value || '').toLowerCase();
-  const category = document.getElementById('filter-category')?.value || 'all';
-  const sortOrder = document.getElementById('sort-order')?.value || 'newest';
+  const filterCategory = q('#filter-category').value;
+  const sortOrder = q('#sort-order').value;
+  const search = q('#search-input').value.trim().toLowerCase();
 
-  let list = data.slice();
+  let items = store[kind].slice();
 
-  if (category !== 'all') {
-    list = list.filter(i => (i.category || '').toLowerCase() === category.toLowerCase());
+  if (filterCategory && filterCategory !== 'all') {
+    items = items.filter(it => (it.category || '').toLowerCase() === filterCategory.toLowerCase());
   }
 
   if (search) {
-    list = list.filter(i => {
-      return (i.title || '').toLowerCase().includes(search) ||
-             (i.description || '').toLowerCase().includes(search) ||
-             (i.location || '').toLowerCase().includes(search) ||
-             (i.reporter || '').toLowerCase().includes(search);
+    items = items.filter(it => {
+      const s = [
+        it.id, it.type, it.category, it.brand, it.model, it.color,
+        it.accessories, it.condition, it.serial, it.locationLost, it.locationFound,
+        it.reporter, it.foundBy, it.storedAt, it.contact, it.status
+      ].join(' ').toLowerCase();
+      return s.includes(search);
     });
   }
 
-  list.sort((a, b) => sortOrder === 'newest' ? (b.timestamp || 0) - (a.timestamp || 0) : (a.timestamp || 0) - (b.timestamp || 0));
+  items.sort((a, b) => {
+    const da = parseDateFlexible(a), db = parseDateFlexible(b);
+    return (sortOrder === 'newest' ? db - da : da - db);
+  });
 
-  tbody.innerHTML = '';
-  list.forEach(item => {
-    // determine columns per table type
-    const idCell = escapeHtml(item.id || '');
-    const imgSrc = escapeHtml(item.image || '');
-    const imgHtml = imgSrc ? `<img src="${imgSrc}" alt="img" width="40" onerror="this.style.display='none'">` : '';
-    const categoryCell = escapeHtml(item.category || '');
-    const status = escapeHtml(item.status || (type === 'claimed' ? 'Pending' : (type === 'found' ? 'Unclaimed' : 'Unfound')));
-    const viewBtn = `<button data-id="${item.id}" data-type="${type}" class="btn-view">View Details</button>`;
-    const editBtn = `<button data-id="${item.id}" data-type="${type}" class="btn-edit">Update</button>`;
-    const delBtn = `<button data-id="${item.id}" data-type="${type}" class="btn-delete">Delete</button>`;
-
-    let dateCell = fmtDate(item.timestamp || item.claimedAt || Date.now());
-    let placeCell = escapeHtml(item.location || item.storedAt || item.claimedFrom || '');
-    let reporterOrClaimed = escapeHtml(item.reporter || item.claimedBy || '');
-
-    // For found items the 'Currently Stored At' might be storedAt property
-    if (type === 'found') {
-      dateCell = fmtDate(item.timestamp || Date.now());
-      placeCell = escapeHtml(item.location || item.storedAt || '');
-      reporterOrClaimed = escapeHtml(item.reporter || '');
-    }
-
-    // For claimed items the claimedAt/claimedBy/claimedFrom fields should be used if present
-    if (type === 'claimed') {
-      dateCell = fmtDate(item.claimedAt || item.timestamp || Date.now());
-      reporterOrClaimed = escapeHtml(item.claimedBy || item.reporter || '');
-      placeCell = escapeHtml(item.claimedFrom || item.location || '');
-    }
-
+  for (const it of items) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${idCell}</td>
-      <td>${imgHtml}</td>
-      <td>${categoryCell}</td>
-      <td>${dateCell}</td>
-      <td>${placeCell}</td>
-      <td>${reporterOrClaimed}</td>
-      <td>${status}</td>
-      <td>${viewBtn}</td>
-      <td>${editBtn} ${delBtn}</td>
+      <td>${it.id || '—'}</td>
+      <td>${thumbnailHtml(it)}</td>
+      <td>${it.category || '—'}</td>
+      <td>${formatDateForColumn(it)}</td>
+      <td>${it.locationLost || it.locationFound || '—'}</td>
+      <td>${getReporterOrStored(it)}</td>
+      <td>${it.status || 'Unclaimed'}</td>
+      <td>
+        <button data-action="view" data-id="${it.id}" data-kind="${kind}">View</button>
+      </td>
+      <td>
+        <button data-action="edit" data-id="${it.id}" data-kind="${kind}">Update</button>
+        <button data-action="delete" data-id="${it.id}" data-kind="${kind}">Delete</button>
+      </td>
     `;
     tbody.appendChild(tr);
-  });
+  }
+}
 
-  // attach simple listeners (no delegation)
-  tbody.querySelectorAll('.btn-view').forEach(b => {
-    b.addEventListener('click', () => viewDetails(b.dataset.id, b.dataset.type));
+function renderAllTables() {
+  ['lost', 'found', 'claimed'].forEach(renderTable);
+}
+
+/* ======= Tab & Controls wiring ======= */
+
+function showPane(kind) {
+  ['lost','found','claimed'].forEach(k => {
+    q(`#pane-${k}`).style.display = k === kind ? '' : 'none';
   });
-  tbody.querySelectorAll('.btn-edit').forEach(b => {
-    b.addEventListener('click', () => openAddEditModal('edit', b.dataset.type, b.dataset.id));
-  });
-  tbody.querySelectorAll('.btn-delete').forEach(b => {
-    b.addEventListener('click', () => {
-      if (!confirm('Delete this listing?')) return;
-      deleteListing(b.dataset.type, b.dataset.id);
-      renderTable(b.dataset.type);
+}
+
+function wireControls() {
+  q('#tab-lost').addEventListener('click', () => showPane('lost'));
+  q('#tab-found').addEventListener('click', () => showPane('found'));
+  q('#tab-claimed').addEventListener('click', () => showPane('claimed'));
+
+  // Go back / role selection button
+  const goBackBtn = q('#btn-go-back');
+  if (goBackBtn) {
+    goBackBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      // navigate back in history; fallback to index if none
+      if (window.history.length > 1) window.history.back();
+      else window.location.href = '../index.html';
+    });
+  }
+
+  q('#search-input').addEventListener('input', () => renderAllTables());
+  q('#filter-category').addEventListener('change', () => renderAllTables());
+  q('#sort-order').addEventListener('change', () => renderAllTables());
+
+  q('#btn-add-listing').addEventListener('click', () => openAddListingModal());
+  q('#btn-review-pending').addEventListener('click', () => openReviewPendingModal());
+
+  qa('#tables table').forEach(tbl => {
+    tbl.addEventListener('click', (ev) => {
+      const btn = ev.target.closest('button');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+      const kind = btn.dataset.kind;
+      if (action === 'view') openViewModal(kind, id);
+      if (action === 'edit') openUpdateModal(kind, id);
+      if (action === 'delete') openDeleteConfirm(kind, id);
     });
   });
 }
 
-function addListing(role, type, data) {
-  // role: 'admin' | 'faculty' | 'student'
-  // type: 'lost' | 'found'
-  // data: object with title, description, category, location, reporter, timestamp
-  const key = type === 'lost' ? 'lostItems' : 'foundItems';
-  const list = loadJSON(key) || [];
-  // ID rules: Lost -> starts with L; Found -> starts with F
-  data.id = type === 'lost' ? genId('lost') : genId('found');
-  // default status
-  data.status = (type === 'lost') ? 'Unfound' : 'Unclaimed';
-  data.timestamp = data.timestamp || Date.now();
-  list.push(data);
-  saveJSON(key, list);
-  console.log(`${role} added ${type} listing`, data);
-  renderTable(type);
+/* ======= Modals ======= */
+
+function showModal(htmlContent) {
+  const overlay = q('#modal-overlay');
+  const modal = q('#modal');
+  modal.innerHTML = htmlContent;
+  overlay.style.display = '';
 }
-
-function updateListing(type, id, newData) {
-  const key = type === 'lost' ? 'lostItems' : (type === 'found' ? 'foundItems' : 'claimedItems');
-  const list = loadJSON(key) || [];
-  const idx = list.findIndex(i => i.id === id);
-  if (idx === -1) return false;
-  list[idx] = Object.assign({}, list[idx], newData);
-  saveJSON(key, list);
-  console.log('Updated listing', id);
-  return true;
-}
-
-function deleteListing(type, id) {
-  const key = type === 'lost' ? 'lostItems' : (type === 'found' ? 'foundItems' : 'claimedItems');
-  let list = loadJSON(key) || [];
-  list = list.filter(i => i.id !== id);
-  saveJSON(key, list);
-  console.log('Deleted listing', id);
-}
-
-function reviewPendingListings() {
-  const pending = loadJSON('pendingListings') || [];
-  openPendingModal(pending);
-}
-
-function approvePending(id) {
-  let pending = loadJSON('pendingListings') || [];
-  const idx = pending.findIndex(p => p.id === id);
-  if (idx === -1) return;
-  const item = pending[idx];
-  // Move to appropriate list
-  const key = item.type === 'lost' ? 'lostItems' : 'foundItems';
-  const list = loadJSON(key) || [];
-  // ensure ID follows rules for approved items
-  const newId = item.type === 'lost' ? genId('lost') : genId('found');
-  const savedCopy = Object.assign({}, item, { id: newId, timestamp: Date.now(), status: (item.type === 'lost' ? 'Unfound' : 'Unclaimed') });
-  list.push(savedCopy);
-  saveJSON(key, list);
-  // remove pending
-  pending = pending.filter(p => p.id !== id);
-  saveJSON('pendingListings', pending);
-  console.log('Approved pending item', id);
-  closeModal();
-  renderActivePane();
-}
-
-function rejectPending(id) {
-  let pending = loadJSON('pendingListings') || [];
-  pending = pending.filter(p => p.id !== id);
-  saveJSON('pendingListings', pending);
-  console.log('Rejected pending item', id);
-  closeModal();
-  renderActivePane();
-}
-
-function viewDetails(id, type) {
-  // show full details modal
-  const key = type === 'claimed' ? 'claimedItems' : (type === 'lost' ? 'lostItems' : 'foundItems');
-  const list = loadJSON(key) || [];
-  const item = list.find(i => i.id === id);
-  if (!item) {
-    alert('Item not found');
-    return;
-  }
-
-  let html = `<h3 style="text-align:center">${escapeHtml(item.title)}</h3>
-    <p><strong>Description:</strong> ${escapeHtml(item.description)}</p>
-    <p><strong>Category:</strong> ${escapeHtml(item.category || '')}</p>
-    <p><strong>Location:</strong> ${escapeHtml(item.location || '')}</p>
-    <p><strong>Reporter:</strong> ${escapeHtml(item.reporter || '')}</p>
-    <p><strong>Date:</strong> ${fmtDate(item.timestamp || item.claimedAt)}</p>
-  `;
-
-  if (type !== 'claimed') {
-    html += `<div>
-      <button id="btn-claim-now" data-id="${id}" data-type="${type}">Mark as Claimed</button>
-      <button id="btn-close-modal">Close</button>
-    </div>`;
-  } else {
-    html += `<div><button id="btn-close-modal">Close</button></div>`;
-  }
-
-  openModal(html);
-
-  if (type !== 'claimed') {
-    document.getElementById('btn-claim-now').addEventListener('click', () => {
-      claimItem(id, type);
-      closeModal();
-      renderActivePane();
-    });
-  }
-  document.getElementById('btn-close-modal').addEventListener('click', closeModal);
-}
-
-function claimItem(id, type) {
-  // Move item from lost/found to claimedItems
-  const srcKey = type === 'lost' ? 'lostItems' : 'foundItems';
-  let list = loadJSON(srcKey) || [];
-  const idx = list.findIndex(i => i.id === id);
-  if (idx === -1) {
-    console.warn('Item to claim not found', id);
-    return;
-  }
-  const item = list.splice(idx, 1)[0];
-  saveJSON(srcKey, list);
-  const claimed = loadJSON('claimedItems') || [];
-  // claimed ID should be "C-" + original id (L... or F...)
-  const claimedId = 'C-' + item.id;
-  const claimedCopy = Object.assign({}, item, { id: claimedId, claimedBy: 'Claimant (pending admin confirm)', claimedAt: Date.now(), status: 'Pending', claimedFrom: item.location || '' });
-  claimed.push(claimedCopy);
-  saveJSON('claimedItems', claimed);
-  console.log('Item moved to claimedItems', claimedId);
-}
-
-// ----------------------------
-// Modal helpers (simple)
-// ----------------------------
-function openModal(html) {
-  const overlay = document.getElementById('modal-overlay');
-  const modal = document.getElementById('modal');
-  modal.innerHTML = html;
-  overlay.style.display = 'block';
-}
-
 function closeModal() {
-  const overlay = document.getElementById('modal-overlay');
-  const modal = document.getElementById('modal');
-  modal.innerHTML = '';
-  overlay.style.display = 'none';
+  q('#modal-overlay').style.display = 'none';
+  q('#modal').innerHTML = '';
 }
 
-// Add / Edit modal
-function openAddEditModal(mode = 'add', type = 'lost', id = null) {
-  // mode: 'add' | 'edit'
-  const isEdit = mode === 'edit';
-  const item = isEdit ? (loadJSON(type === 'lost' ? 'lostItems' : 'foundItems') || []).find(i => i.id === id) : {};
-  const title = isEdit ? 'Edit Listing' : 'Add Listing';
+/* ======= Add / Update Listing ======= */
+
+function openAddListingModal(prefill = null) {
+  const initialKind = prefill ? prefill._kind || (prefill.id && prefill.id.startsWith('F-')? 'found' : 'lost') : 'lost';
+
+  const categories = [
+    'Personal Items',
+    'Electronics',
+    'Documents',
+    'School / Office Supplies',
+    'Miscellaneous'
+  ];
+  const conditionOptions = [
+    'Brand New',
+    'Used',
+    'Slightly Used',
+    'Damaged'
+  ];
+  function categoryOptionsHtml(selected) {
+    return categories.map(c => `<option value="${c}" ${selected === c ? 'selected' : ''}>${c}</option>`).join('');
+  }
+  function conditionOptionsHtml(selected) {
+    return conditionOptions.map(c => `<option value="${c}" ${selected === c ? 'selected' : ''}>${c}</option>`).join('');
+  }
+
   const html = `
-    <h3>${title} (${type.toUpperCase()})</h3>
-    <form id="form-listing">
-      <label>Title: <input name="title" required value="${escapeHtml(item.title || '')}"></label><br>
-      <label>Description:<br><textarea name="description" required>${escapeHtml(item.description || '')}</textarea></label><br>
-      <label>Category:
-        <select name="category">
-          <option value="other" ${item.category === 'other' ? 'selected' : ''}>Other</option>
-          <option value="electronics" ${item.category === 'electronics' ? 'selected' : ''}>Electronics</option>
-          <option value="documents" ${item.category === 'documents' ? 'selected' : ''}>Documents</option>
-          <option value="clothing" ${item.category === 'clothing' ? 'selected' : ''}>Clothing</option>
-        </select>
-      </label><br>
-      <label>Location: <input name="location" value="${escapeHtml(item.location || '')}"></label><br>
-      <label>Reporter: <input name="reporter" value="${escapeHtml(item.reporter || '')}"></label><br>
+    <h2>${prefill ? 'Update Listing' : 'Add Listing'}</h2>
+    <form id="form-add">
       <div>
-        <button type="submit">${isEdit ? 'Update' : 'Post'}</button>
-        <button type="button" id="btn-cancel">Cancel</button>
+        <label>Report as:
+          <label><input type="radio" name="reportAs" value="lost" ${initialKind==='lost' ? 'checked' : ''}> LOST</label>
+          <label><input type="radio" name="reportAs" value="found" ${initialKind==='found' ? 'checked' : ''}> FOUND</label>
+        </label>
+      </div>
+
+      <fieldset id="common-fields">
+        <label>Category:
+          <select name="category" required>
+            <option value="">-- select category --</option>
+            ${categoryOptionsHtml(prefill?.category || '')}
+          </select>
+        </label><br>
+        <label>Type: <input name="type" value="${prefill?.type || ''}"></label><br>
+        <label>Brand / Model: <input name="brand" value="${prefill?.brand || ''}"></label><br>
+        <label>Color: <input name="color" value="${prefill?.color || ''}"></label><br>
+        <label>Accessories / Contents: <input name="accessories" value="${prefill?.accessories || ''}"></label><br>
+        <label>Condition:
+          <select name="condition">
+            <option value="">-- select condition --</option>
+            ${conditionOptionsHtml(prefill?.condition || '')}
+          </select>
+        </label><br>
+        <label>Serial / Unique Mark: <input name="serial" value="${prefill?.serial || ''}"></label><br>
+        <label>Image (data URL or filename): <input name="image" value="${prefill?.image || ''}"></label><br>
+      </fieldset>
+
+      <fieldset id="lost-fields">
+        <h4>If LOST</h4>
+        <label>Lost At: <input name="locationLost" value="${prefill?.locationLost || ''}"></label><br>
+        <label>Date Lost: <input name="dateLost" type="date" value="${prefill?.dateLost || ''}"></label><br>
+        <label>Owner / Reporter Name: <input name="reporter" value="${prefill?.reporter || ''}"></label><br>
+        <label>Contact Info: <input name="contact" value="${prefill?.contact || ''}"></label><br>
+      </fieldset>
+
+      <fieldset id="found-fields" style="display:none">
+        <h4>If FOUND</h4>
+        <label>Found At: <input name="locationFound" value="${prefill?.locationFound || ''}"></label><br>
+        <label>Date Found: <input name="dateFound" type="date" value="${prefill?.dateFound || ''}"></label><br>
+        <label>Found By: <input name="foundBy" value="${prefill?.foundBy || ''}"></label><br>
+        <label>Currently Stored At: <input name="storedAt" value="${prefill?.storedAt || ''}"></label><br>
+      </fieldset>
+
+      <div id="status-row" style="${prefill ? '' : 'display:none'}">
+        <label>Status:
+          <select name="status">
+            <option value="Pending">Pending</option>
+            <option value="Unclaimed">Unclaimed</option>
+            <option value="Claimed">Claimed</option>
+            <option value="Returned">Returned</option>
+            <option value="Rejected">Rejected</option>
+          </select>
+        </label>
+      </div>
+
+      <div style="margin-top:1rem">
+        <button type="submit">${prefill ? 'Save Changes' : 'Submit Listing'}</button>
+        <button type="button" id="cancel">Cancel</button>
       </div>
     </form>
   `;
-  openModal(html);
+  showModal(html);
 
-  document.getElementById('btn-cancel').addEventListener('click', closeModal);
-  document.getElementById('form-listing').addEventListener('submit', e => {
-    e.preventDefault();
-    const fd = new FormData(e.target);
-    const data = {
-      title: fd.get('title') || '',
-      description: fd.get('description') || '',
-      category: fd.get('category') || 'other',
-      location: fd.get('location') || '',
-      reporter: fd.get('reporter') || '',
-      timestamp: Date.now()
-    };
-    if (isEdit && id) {
-      updateListing(type, id, data);
+  const frm = q('#form-add');
+
+  function toggleFields() {
+    const val = frm.reportAs.value;
+    q('#lost-fields').style.display = val === 'lost' ? '' : 'none';
+    q('#found-fields').style.display = val === 'found' ? '' : 'none';
+    // allow switching reportAs while editing
+  }
+  toggleFields();
+  qa('input[name="reportAs"]', frm).forEach(r => r.addEventListener('change', toggleFields));
+
+  if (prefill && prefill.status) {
+    q('select[name="status"]').value = prefill.status;
+  }
+
+  frm.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const fd = new FormData(frm);
+    const obj = {};
+    for (const [k, v] of fd.entries()) obj[k] = v;
+    const newKind = obj.reportAs;
+
+    if (prefill) {
+      const originalKind = prefill._kind || detectKindFromId(prefill.id) || 'pending';
+
+      // updating a pending listing: locate by _pid
+      if (originalKind === 'pending') {
+        const pid = prefill._pid;
+        const pidx = findPendingIndexByPid(pid);
+        if (pidx === -1) return;
+
+        const pendingItem = Object.assign({}, store.pending[pidx], obj);
+        if (!obj.status || obj.status === 'Pending') {
+          pendingItem.status = 'Pending';
+          pendingItem.lastUpdated = new Date().toISOString();
+          store.pending[pidx] = pendingItem;
+          saveToLocal('pending', store.pending);
+        } else {
+          const destKind = (obj.reportAs === 'found') ? 'found' : 'lost';
+          // Claim/Return -> claimed
+          if (obj.status === 'Claimed' || obj.status === 'Returned') {
+            const assignedId = genId(destKind);
+            const claimedId = `C-${assignedId}`;
+            const claimedItem = Object.assign({}, pendingItem, {
+              id: claimedId,
+              originalId: assignedId,
+              status: obj.status,
+              claimedBy: pendingItem.reporter || pendingItem.foundBy || 'Admin',
+              claimedFrom: pendingItem.storedAt || pendingItem.locationFound || pendingItem.locationLost || 'Security Office',
+              dateClaimed: new Date().toISOString(),
+              postedAt: new Date().toISOString(),
+              lastUpdated: new Date().toISOString(),
+              _kind: 'claimed'
+            });
+            // remove pending
+            store.pending.splice(pidx, 1);
+            store.claimed.push(claimedItem);
+            saveToLocal('claimed', store.claimed);
+            saveToLocal('pending', store.pending);
+          } else {
+            // approve as Unclaimed -> move to lost/found and assign ID
+            const assignedId = genId(destKind);
+            const approved = Object.assign({}, pendingItem, {
+              id: assignedId,
+              status: 'Unclaimed',
+              postedAt: new Date().toISOString(),
+              lastUpdated: new Date().toISOString(),
+              _kind: destKind
+            });
+            store.pending.splice(pidx, 1);
+            store[destKind].push(approved);
+            saveToLocal(destKind, store[destKind]);
+            saveToLocal('pending', store.pending);
+          }
+        }
+      }
+      // updating a lost/found item
+      else if (originalKind === 'lost' || originalKind === 'found') {
+        const arr = store[originalKind];
+        const idx = arr.findIndex(x => x.id === prefill.id);
+        if (idx === -1) return alert('Item not found');
+
+        const originalId = arr[idx].id;
+        const updated = Object.assign({}, arr[idx], obj, {
+          category: obj.category || arr[idx].category,
+          lastUpdated: new Date().toISOString(),
+          status: obj.status || arr[idx].status
+        });
+
+        const newStatus = updated.status;
+
+        if (newStatus === 'Pending') {
+          arr.splice(idx, 1);
+          saveToLocal(originalKind, arr);
+
+          const pendingItem = Object.assign({}, updated);
+          delete pendingItem.id;
+          pendingItem.status = 'Pending';
+          pendingItem.submissionDate = new Date().toISOString();
+          pendingItem._kind = 'pending';
+          ensurePendingPid(pendingItem);
+          store.pending.push(pendingItem);
+          saveToLocal('pending', store.pending);
+        } else if (newStatus === 'Claimed' || newStatus === 'Returned') {
+          arr.splice(idx, 1);
+          saveToLocal(originalKind, arr);
+
+          const claimedId = originalId && originalId.startsWith('C-') ? originalId : `C-${originalId || genId(originalKind)}`;
+          const claimedItem = Object.assign({}, updated, {
+            id: claimedId,
+            originalId: originalId,
+            status: newStatus,
+            claimedBy: updated.reporter || updated.foundBy || 'Admin',
+            claimedFrom: updated.storedAt || updated.locationFound || updated.locationLost || 'Security Office',
+            dateClaimed: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+            _kind: 'claimed'
+          });
+          store.claimed.push(claimedItem);
+          saveToLocal('claimed', store.claimed);
+        } else {
+          if (newKind && newKind !== originalKind) {
+            arr.splice(idx, 1);
+            saveToLocal(originalKind, arr);
+            const newId = genId(newKind);
+            const moved = Object.assign({}, updated, {
+              id: newId,
+              _kind: newKind
+            });
+            store[newKind].push(moved);
+            saveToLocal(newKind, store[newKind]);
+          } else {
+            arr[idx] = updated;
+            saveToLocal(originalKind, arr);
+          }
+        }
+      }
+      // updating a claimed item
+      else if (originalKind === 'claimed') {
+        const carr = store.claimed;
+        const cidx = carr.findIndex(x => x.id === prefill.id);
+        if (cidx === -1) return alert('Claimed item not found');
+        const claimed = Object.assign({}, carr[cidx], obj, {
+          lastUpdated: new Date().toISOString(),
+          status: obj.status || carr[cidx].status
+        });
+
+        if (claimed.status === 'Unclaimed') {
+          carr.splice(cidx, 1);
+          saveToLocal('claimed', carr);
+
+          const destKind = detectKindFromId(claimed.originalId) || (claimed.reportAs === 'found' ? 'found' : 'lost');
+          const restoredId = claimed.originalId || genId(destKind);
+          const restored = Object.assign({}, claimed, {
+            id: restoredId,
+            status: 'Unclaimed',
+            _kind: destKind,
+            lastUpdated: new Date().toISOString()
+          });
+          delete restored.originalId;
+          store[destKind].push(restored);
+          saveToLocal(destKind, store[destKind]);
+        } else {
+          carr[cidx] = claimed;
+          saveToLocal('claimed', carr);
+        }
+      }
+
     } else {
-      // admin posts directly to list
-      addListing('admin', type, data);
+      // new listing -> push to pending list (default pending) WITHOUT a public id
+      const item = Object.assign({}, obj, {
+        status: 'Pending',
+        submissionDate: new Date().toISOString(),
+        _kind: 'pending'
+      });
+      if ('id' in item) delete item.id;
+      ensurePendingPid(item);
+      store.pending.push(item);
+      saveToLocal('pending', store.pending);
+    }
+
+    renderAllTables();
+    closeModal();
+  });
+
+  q('#cancel').addEventListener('click', () => closeModal());
+}
+
+/* ======= Helper: detect kind from id ======= */
+function detectKindFromId(id) {
+  if (!id) return null;
+  if (id.startsWith('L-')) return 'lost';
+  if (id.startsWith('F-')) return 'found';
+  if (id.startsWith('C-')) return 'claimed';
+  return null;
+}
+
+/* ======= View Details ======= */
+
+function openViewModal(kind, id) {
+  const arr = store[kind];
+  const item = arr.find(x => x.id === id);
+  if (!item) return alert('Item not found');
+  const html = `
+    <h3>Details — ${item.id}</h3>
+    <div style="text-align:left">
+      <div>${item.image ? `<img src="${item.image.startsWith('data:')?item.image:'../images/'+item.image}" width="200">` : ''}</div>
+      <p><strong>Report Type:</strong> ${kind.toUpperCase()}</p>
+      <p><strong>Category:</strong> ${item.category || '—'}</p>
+      <p><strong>Type:</strong> ${item.type || '—'}</p>
+      <p><strong>Brand/Model:</strong> ${item.brand || '—'}</p>
+      <p><strong>Color:</strong> ${item.color || '—'}</p>
+      <p><strong>Accessories/Contents:</strong> ${item.accessories || '—'}</p>
+      <p><strong>Condition:</strong> ${item.condition || '—'}</p>
+      <p><strong>Serial/Unique Mark:</strong> ${item.serial || '—'}</p>
+      <p><strong>Lost/Found At:</strong> ${item.locationLost || item.locationFound || '—'}</p>
+      <p><strong>Date Lost/Found:</strong> ${formatDateForColumn(item)}</p>
+      <p><strong>Reporter/Finder:</strong> ${item.reporter || item.foundBy || '—'}</p>
+      <p><strong>Contact Info:</strong> ${item.contact || '—'}</p>
+      <p><strong>Currently Stored At / Claimed From:</strong> ${item.storedAt || item.claimedFrom || '—'}</p>
+      <p><strong>Status:</strong> ${item.status || 'Unclaimed'}</p>
+      <p><strong>Posted:</strong> ${formatDateOnly(item.postedAt || item.createdAt)}</p>
+      <p><strong>Last Updated:</strong> ${formatDateOnly(item.lastUpdated)}</p>
+    </div>
+    <div style="margin-top:1rem">
+      <button id="close-details">Close</button>
+    </div>
+  `;
+  showModal(html);
+  q('#close-details').addEventListener('click', closeModal);
+}
+
+/* ======= Update Listing (open pre-filled Add form) ======= */
+
+function openUpdateModal(kind, id) {
+  const arr = store[kind];
+  const item = arr.find(x => x.id === id);
+  if (!item) return alert('Item not found');
+  const copy = Object.assign({}, item, {_kind: kind});
+  openAddListingModal(copy);
+}
+
+/* ======= Delete with confirmation ======= */
+
+function openDeleteConfirm(kind, id) {
+  const html = `
+    <h3>Delete Item</h3>
+    <p>To confirm deletion, type the Item ID exactly:</p>
+    <p><strong>${id}</strong></p>
+    <input id="confirm-id" placeholder="Type ID to confirm">
+    <div style="margin-top:1rem">
+      <button id="do-delete">Delete</button>
+      <button id="cancel-delete">Cancel</button>
+    </div>
+  `;
+  showModal(html);
+  q('#cancel-delete').addEventListener('click', closeModal);
+  q('#do-delete').addEventListener('click', () => {
+    const v = q('#confirm-id').value.trim();
+    if (v !== id) return alert('ID mismatch. Deletion cancelled.');
+    const arr = store[kind];
+    const idx = arr.findIndex(x => x.id === id);
+    if (idx >= 0) {
+      arr.splice(idx, 1);
+      saveToLocal(kind, arr);
+      renderAllTables();
     }
     closeModal();
-    renderActivePane();
   });
 }
 
-// Pending modal
-function openPendingModal(pending) {
-  if (!pending || !pending.length) {
-    alert('No pending listings');
-    return;
+/* ======= Pending Review (fixed: use _pid) ======= */
+
+function openReviewPendingModal() {
+  const list = store.pending || [];
+  const sorted = list.slice().sort((a,b)=> parseDateFlexible(b)-parseDateFlexible(a));
+  let html = `<h3>Pending Listings (${sorted.length})</h3><div style="text-align:left">`;
+  if (sorted.length === 0) html += '<p>No pending listings</p>';
+  for (const it of sorted) {
+    ensurePendingPid(it);
+    html += `
+      <div style="border:1px solid #ddd;padding:8px;margin:6px;">
+        <strong>[ ${it.type||'Item'} ] ${it.category || ''} – ${it.brand || ''}</strong><br>
+        Reported by: ${it.reporter || it.foundBy || '—'}<br>
+        Date: ${formatDateForColumn(it)}<br>
+        Status: ${it.status || 'Pending'}<br>
+        <div style="margin-top:6px">
+          <button data-paction="view" data-pid="${it._pid}">View Details</button>
+          <button data-paction="approve" data-pid="${it._pid}">Approve</button>
+          <button data-paction="reject" data-pid="${it._pid}">Reject</button>
+          <button data-paction="edit" data-pid="${it._pid}">Edit Before Approving</button>
+        </div>
+      </div>
+    `;
   }
-  let html = '<h3>Pending Submissions</h3><div>';
-  pending.forEach(p => {
-    html += `<div style="border:1px solid #ccc; margin:0.5rem; padding:0.5rem;">
-      <strong>[${escapeHtml(p.type)}]</strong> ${escapeHtml(p.title)} — ${escapeHtml(p.reporter)}<br>
-      ${escapeHtml(p.description)}<br>
-      <button data-id="${p.id}" class="pending-approve">Approve</button>
-      <button data-id="${p.id}" class="pending-reject">Reject</button>
-    </div>`;
-  });
-  html += `<div><button id="btn-close-pending">Close</button></div></div>`;
-  openModal(html);
+  html += `</div><div style="margin-top:1rem"><button id="close-pending">Close</button></div>`;
+  showModal(html);
 
-  document.querySelectorAll('.pending-approve').forEach(b => {
-    b.addEventListener('click', () => approvePending(b.dataset.id));
-  });
-  document.querySelectorAll('.pending-reject').forEach(b => {
-    b.addEventListener('click', () => rejectPending(b.dataset.id));
-  });
-  document.getElementById('btn-close-pending').addEventListener('click', closeModal);
-}
-
-// ----------------------------
-// Helpers & wiring to UI
-// ----------------------------
-function escapeHtml(str) {
-  return ('' + (str || '')).replace(/[&<>"']/g, function (m) {
-    return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m];
-  });
-}
-
-function renderActivePane() {
-  const panes = ['lost', 'found', 'claimed'];
-  panes.forEach(p => {
-    const paneEl = document.getElementById(`pane-${p}`);
-    if (!paneEl) return;
-    paneEl.style.display = (activePane === p) ? '' : 'none';
-    renderTable(p);
-  });
-}
-
-// initial active pane
-let activePane = 'lost';
-
-// Initialize app
-document.addEventListener('DOMContentLoaded', () => {
-  initStorageIfEmpty();
-
-  // Tab buttons
-  document.getElementById('tab-lost').addEventListener('click', () => { activePane = 'lost'; renderActivePane(); });
-  document.getElementById('tab-found').addEventListener('click', () => { activePane = 'found'; renderActivePane(); });
-  document.getElementById('tab-claimed').addEventListener('click', () => { activePane = 'claimed'; renderActivePane(); });
-
-  // Search, filters, sort -> re-render current pane
-  document.getElementById('search-input').addEventListener('input', () => renderTable(activePane));
-  document.getElementById('filter-category').addEventListener('change', () => renderTable(activePane));
-  document.getElementById('sort-order').addEventListener('change', () => renderTable(activePane));
-
-  // Add listing (Admin)
-  document.getElementById('btn-add-listing').addEventListener('click', () => {
-    // ask admin whether lost or found (simple prompt)
-    const type = prompt('Add listing type: "lost" or "found"', 'lost');
-    if (type !== 'lost' && type !== 'found') {
-      alert('Cancelled: please enter "lost" or "found"');
-      return;
+  const modal = q('#modal');
+  modal.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('button');
+    if (!btn) return;
+    const pa = btn.dataset.paction;
+    const pid = btn.dataset.pid;
+    if (!pa) return;
+    const pidx = findPendingIndexByPid(pid);
+    const item = pidx >= 0 ? store.pending[pidx] : null;
+    if (pa === 'view') {
+      if (item) openPendingDetailModal(item);
+      else return;
     }
-    openAddEditModal('add', type);
+    if (pa === 'approve') {
+      if (item) handlePendingApproveByPid(pid);
+      else return;
+    }
+    if (pa === 'reject') {
+      if (item) handlePendingRejectByPid(pid);
+      else return;
+    }
+    if (pa === 'edit') {
+      if (item) {
+        const copy = Object.assign({}, item, {_kind: item.reportAs || 'lost', _pid: item._pid});
+        openAddListingModal(copy);
+      } else return;
+    }
+  }, {once:false});
+
+  q('#close-pending').addEventListener('click', closeModal);
+}
+
+function openPendingDetailModal(item) {
+  const html = `
+    <h3>Pending — (no public id)</h3>
+    <div style="text-align:left">
+      <p><strong>Report Type:</strong> ${item.reportAs || '—'}</p>
+      <p><strong>Category:</strong> ${item.category || '—'}</p>
+      <p><strong>Type:</strong> ${item.type || '—'}</p>
+      <p><strong>Brand/Model:</strong> ${item.brand || '—'}</p>
+      <p><strong>Reporter/Finder:</strong> ${item.reporter || item.foundBy || '—'}</p>
+      <p><strong>Contact:</strong> ${item.contact || '—'}</p>
+      <p><strong>Submitted:</strong> ${formatDateOnly(item.submissionDate || item.postedAt || item.createdAt)}</p>
+      <p><strong>Notes:</strong> ${item.notes || '—'}</p>
+    </div>
+    <div style="margin-top:1rem">
+      <button id="pending-approve">Approve</button>
+      <button id="pending-reject">Reject</button>
+      <button id="pending-close">Close</button>
+    </div>
+  `;
+  showModal(html);
+  q('#pending-close').addEventListener('click', closeModal);
+  q('#pending-approve').addEventListener('click', () => {
+    handlePendingApproveByPid(item._pid);
   });
-
-  // Review pending
-  document.getElementById('btn-review-pending').addEventListener('click', () => reviewPendingListings());
-
-  // Modal overlay click -> close (not when clicking modal)
-  document.getElementById('modal-overlay').addEventListener('click', (e) => {
-    if (e.target.id === 'modal-overlay') closeModal();
+  q('#pending-reject').addEventListener('click', () => {
+    handlePendingRejectByPid(item._pid);
   });
+}
 
-  // Render initial
-  renderActivePane();
-});
+function handlePendingApproveByPid(pid) {
+  const idx = findPendingIndexByPid(pid);
+  if (idx === -1) return;
+  const item = store.pending[idx];
+  const destKind = (item.reportAs && (item.reportAs === 'found' ? 'found' : 'lost')) || 'lost';
+  const assignedId = genId(destKind);
+  const approved = Object.assign({}, item, {
+    id: assignedId,
+    status: 'Unclaimed',
+    postedAt: new Date().toISOString(),
+    lastUpdated: new Date().toISOString(),
+    _kind: destKind
+  });
+  // remove internal pid before saving to collections
+  delete approved._pid;
+  store[destKind].push(approved);
+  store.pending.splice(idx,1);
+  saveToLocal(destKind, store[destKind]);
+  saveToLocal('pending', store.pending);
+  renderAllTables();
+  closeModal();
+}
+
+function handlePendingRejectByPid(pid) {
+  const idx = findPendingIndexByPid(pid);
+  if (idx === -1) return;
+  if (!confirm('Reject this pending listing?')) return;
+  store.pending.splice(idx,1);
+  saveToLocal('pending', store.pending);
+  renderAllTables();
+  closeModal();
+}
+
+/* ======= Init ======= */
+
+async function initAdmin() {
+  await loadAllData();
+  wireControls();
+  renderAllTables();
+
+  q('#modal-overlay').addEventListener('click', (ev) => {
+    if (ev.target.id === 'modal-overlay') closeModal();
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initAdmin);

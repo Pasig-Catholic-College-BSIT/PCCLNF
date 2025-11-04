@@ -7,13 +7,18 @@
   <link rel="icon" href="../images/redpaul.png" type="image/png">
   <!-- No CSS/design — plain structure only -->
 </head>
-<body style="text-align:center">
+<body style="text-align:center; position:relative;">
+  <!-- Go Back (role selection) button - top-left -->
+  <div style="position:absolute; left:1rem; top:1rem;">
+    <button id="btn-go-back" type="button">← Go Back</button>
+  </div>
+
   <!-- Header -->
   <h1>WELCOME TO PASIG CATHOLIC COLLEGE - LOST AND FOUND</h1>
 
   <!-- Controls: Search -->
   <div>
-    <input id="search-input" type="search" placeholder="Search listings (title, description, location, reporter)"/>
+    <input id="search-input" type="search" placeholder="Search listings"/>
   </div>
 
   <!-- Tabs -->
@@ -28,10 +33,11 @@
     <label>Category:
       <select id="filter-category">
         <option value="all">All</option>
-        <option value="electronics">Electronics</option>
-        <option value="documents">Documents</option>
-        <option value="clothing">Clothing</option>
-        <option value="other">Other</option>
+        <option value="Personal Items">Personal Items</option>
+        <option value="Electronics">Electronics</option>
+        <option value="Documents">Documents</option>
+        <option value="School / Office Supplies">School / Office Supplies</option>
+        <option value="Miscellaneous">Miscellaneous</option>
       </select>
     </label>
 
@@ -59,8 +65,8 @@
             <th>Lost At</th>
             <th>Reported By</th>
             <th>Status</th>
-            <th>View Details</th>
-            <th>Actions (Update, Delete)</th>
+            <th></th>
+            <th></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -78,8 +84,8 @@
             <th>Found At</th>
             <th>Currently Stored At</th>
             <th>Status</th>
-            <th>View Details</th>
-            <th>Actions (Update, Delete)</th>
+            <th></th>
+            <th></th>
           </tr>
         </thead>
         <tbody></tbody>
@@ -97,8 +103,8 @@
             <th>Claimed By</th>
             <th>Claimed From</th>
             <th>Status</th>
-            <th>View Details</th>
-            <th>Actions (Update, Delete)</th>
+            <th></th>
+            <th></th>
           </tr>
         </thead>
         <tbody></tbody>
