@@ -32,10 +32,7 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
   height: 100vh;
   margin: 0;
-  background: linear-gradient(350deg,#ffffff 0%,
-                            #8B0000 2%, 
-                            #8B0000 71%, 
-                            #ffffff 100%);
+  background: linear-gradient(175deg,#ffffff 0%,#8B0000 20%);
 z-index: -2;
 }
 
@@ -75,7 +72,7 @@ h1 {
   max-width: var(--max-width);
   margin-left: auto;
   margin-right: auto;
-  transform: translateY(-5px);
+  transform: translateY(10px);
 }
 
 #logo {
@@ -102,7 +99,7 @@ h1 {
   color: var(--text-dark);
   margin: 18px 0;
   transition: box-shadow .12s ease, transform .06s ease;
-  transform: translateY(-20px);
+  transform: translateY(-5px);
 }
 
 /* magnifying glass icon on the right of the input (pure CSS SVG) */

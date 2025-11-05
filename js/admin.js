@@ -819,33 +819,75 @@ function openViewModal(kind, id) {
     console.warn('openViewModal: item not found', kind, id);
     return;
   }
-  const imgHtml = item.image ? `<div>${item.image.startsWith('data:')? `<img src="${item.image}" width="200">` : `<img src="../images/${item.image}" width="200" onerror="this.style.display='none'">`}</div>` : '';
+
+  const imgSrc = item.image
+    ? (typeof item.image === 'string' && item.image.startsWith('data:') ? item.image : `../images/${item.image}`)
+    : '';
+
   const html = `
-    <h3>Details — ${item.id}</h3>
-    <div style="text-align:left">
-      ${imgHtml}
-      <p><strong>Report Type:</strong> ${kind.toUpperCase()}</p>
-      <p><strong>Category:</strong> ${item.category || '—'}</p>
-      <p><strong>Type:</strong> ${item.type || '—'}</p>
-      <p><strong>Brand/Model:</strong> ${item.brand || '—'}</p>
-      <p><strong>Color:</strong> ${item.color || '—'}</p>
-      <p><strong>Accessories/Contents:</strong> ${item.accessories || '—'}</p>
-      <p><strong>Condition:</strong> ${item.condition || '—'}</p>
-      <p><strong>Serial/Unique Mark:</strong> ${item.serial || '—'}</p>
-      <p><strong>Lost/Found At:</strong> ${item.locationLost || item.locationFound || '—'}</p>
-      <p><strong>Date Lost/Found:</strong> ${formatDateForColumn(item)}</p>
-      <p><strong>Reporter/Finder:</strong> ${item.reporter || item.foundBy || '—'}</p>
-      <p><strong>Contact Info:</strong> ${item.contact || '—'}</p>
-      <p><strong>Currently Stored At / Claimed From:</strong> ${item.storedAt || item.claimedFrom || '—'}</p>
-      <p><strong>Status:</strong> ${item.status || 'Unclaimed'}</p>
-      <p><strong>Posted:</strong> ${formatDateOnly(item.postedAt || item.createdAt)}</p>
-      <p><strong>Last Updated:</strong> ${formatDateOnly(item.lastUpdated)}</p>
-    </div>
-    <div style="margin-top:1rem">
-      <button id="close-details">Close</button>
-    </div>
+    <div class="add-listing-modal view-modal">
+      <div class="modal-header modal-header-centered">
+        <img class="modal-logo" src="../images/pcclogo.png" alt="logo" />
+        <h2 class="modal-title">Details of ITEM — ${item.id || ''}</h2>
+      </div>
+
+      <div class="view-form">
+        <div class="add-modal-middle">
+          <aside class="add-left" style="padding:8px;">
+            ${ imgSrc ? `<div class="img-preview-wrap"><img id="view-image" class="img-preview" src="${imgSrc}" alt="item image"></div>` : `<div class="img-placeholder" style="padding:18px;color:var(--medium-gray)">No image available</div>` }
+          <div class="modal-body2">
+              <hr style="border:0;border-top:1px solid var(--light-gray)">
+
+              <!-- 🟥 STATUS INFO -->
+              <h3 style="margin:10px 0 6px;color:var(--primary)">Status Info</h3>
+              <p><strong>Status:</strong> ${ item.status || '—' }</p>
+              <p><strong>Posted:</strong> ${ formatDateOnly(item.postedAt || item.createdAt) }</p>
+              <p><strong>Last Updated:</strong> ${ formatDateOnly(item.lastUpdated) }</p>
+            </div>
+            </aside>
+
+          <section class="view-right">
+            <div class="modal-body">
+              <!-- 🟩 ITEM DETAILS -->
+              <h3 style="color:var(--primary)">Item Details</h3>
+              <p><strong> Category:</strong> ${ item.category || '—' }</p>
+              <p><strong> Type:</strong> ${ item.type || '—' }</p>
+              <p><strong> Brand / Model:</strong> ${ item.brand || '—' }</p>
+              <p><strong> Color:</strong> ${ item.color || '—' }</p>
+              <p><strong> Accessories / Contents:</strong> ${ item.accessories || '—' }</p>
+              <p><strong> Condition:</strong> ${ item.condition || '—' }</p>
+              <p><strong> Serial / Unique Mark:</strong> ${ item.serial || '—' }</p>
+
+              <hr style="border:0;border-top:1px solid var(--light-gray)">
+
+              <!-- 🟦 DISCOVERY INFO -->
+              <h3 style="margin:10px 0 6px;color:var(--primary)">Discovery Info</h3>
+              <p><strong>Report Type:</strong> ${ (item.reportAs || kind || '').toUpperCase() }</p>
+              <p><strong>Reported By:</strong> ${ item.reporter || item.foundBy || '—' }</p>
+              <p><strong>Contact:</strong> ${ item.contact || '—' }</p>
+              <p><strong>Location Found / Lost:</strong> ${ item.locationFound || item.locationLost || '—' }</p>
+              <p><strong>Date Found / Lost:</strong> ${ formatDateForColumn(item) }</p>
+
+              <hr style="border:0;border-top:1px solid var(--light-gray)">
+
+              <!-- 🟨 CLAIM INFORMATION -->
+              <h3 style=;color:var(--primary)">Claim Information</h3>
+              <p><strong>Claimed By:</strong> ${ item.claimedBy || '—' }</p>
+              <p><strong>Claimed Date:</strong> ${ item.claimedAt ? formatDateOnly(item.claimedAt) : '—' }</p>
+              </div>
+          </section>
+        </div>
+
+
+
+        <div class="modal-close" style="margin-top:10px">
+          <button id="close-details" class="btn-viewclose">Close</button>
+        </div>
+      </div>
+    </div>s
   `;
   showModal(html);
+
   q('#close-details').addEventListener('click', closeModal);
 }
 
@@ -874,7 +916,7 @@ function openDeleteConfirm(kind, id) {
 
       <div class="modal-body" style="text-align:center">
         <p>To confirm deletion, type the Item ID exactly.</p>
-        <p style="font-weight:700; letter-spacing:1px; font-size:2rem">${id}</p>
+        <p style="font-weight:700; letter-spacing:1px; font-size:2rem; margin:0">${id}</p>
 
         <label for="confirm-id" style="margin-top:8px;font-weight:700">Confirm Item ID</label>
         <input id="confirm-id" type="text" style="text-align:center" placeholder="${id}" aria-label="Type Item ID to confirm" />

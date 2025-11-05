@@ -9,6 +9,7 @@
   display: none;                 /* toggled by JS */
   background: rgba(2,6,23,0.45);
   backdrop-filter: blur(3px);
+  height: 700px;
   -webkit-backdrop-filter: blur(3px);
   z-index: 30000;                /* ensure overlay sits above everything */
   box-sizing: border-box;
@@ -355,10 +356,6 @@ transform: translateY(-25px);;
   font-size: larger;
 }
 
-.add-listing-modal .modal-footer:hover{
-  transform: translateX(-1px);
-}
-
 /* Confirm Delete modal specific styles */
 .confirm-delete-modal {
   max-width: 1000px;
@@ -367,6 +364,10 @@ transform: translateY(-25px);;
   display: block;
   align-items: center;
 }
+
+.confirm-delete-modal .modal-header .modal-title {
+transform: translateY(-22px);}
+
 .confirm-delete-modal .modal-body {
   padding: 8px 0 0 0;
 }
@@ -422,3 +423,70 @@ transform: translateY(-25px);;
 
 /* keep modal above sticky headers (safety) */
 #modal, .add-listing-modal, #modal * { z-index: 30001; }
+
+
+.view-modal .modal-header .modal-title {
+  transform: translateY(-22px);
+}
+
+.add-listing-modal .view-form #view-image {
+    max-width: 1000px;
+    width: 450px;
+    max-height: 500px;
+    height: 350px;
+    border-radius: 8px;
+    display: block;
+    margin: 0 auto 8px;
+    object-fit: contain;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 1);
+    transform: translateY(-12px);;
+}
+
+.add-listing-modal .modal-close > .btn-viewclose{
+  padding-top:6px;
+    transform: translate(570px , -590px);
+  width: 120px;
+  height: 585px;
+}
+
+.btn-viewclose {
+  background: var(--light-gray, #E5E7EB);
+  color: var(--primary-red, #1F2937);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor:pointer;
+  font-weight:700;
+  font-size: larger ;
+}
+
+.btn-viewclose:hover { background: #dcdcdc; transform: translateY(-1px); }
+
+.view-right > .modal-body {
+    padding-left: 150px;
+    text-align: left;
+    transform: translateY(-2px);
+    overflow: auto;
+
+}
+.view-right > .modal-body h3 {
+    text-align: center;
+    margin: 0;
+}
+.view-right > .modal-body p {
+    margin: 0;
+}
+
+.modal-body2 {
+    padding-left: 5px;
+    text-align: left;
+    transform: translateY(-10px);
+    width: 450px;
+}
+.modal-body2 h3 {
+    text-align: center;
+    margin: 0;
+}
+.modal-body2 p {
+    margin: 0;
+}
