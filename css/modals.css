@@ -1,0 +1,424 @@
+/* Modal styles / design for admin & faculty-student popups
+   Uses root variables from admin.css (colors, radii).
+*/
+
+/* Overlay: always above page content and sticky headers */
+#modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;                 /* toggled by JS */
+  background: rgba(2,6,23,0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 30000;                /* ensure overlay sits above everything */
+  box-sizing: border-box;
+
+  /* place modal near top of viewport (small gap) */
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px;
+  transform: translate(0px, -35px);
+}
+
+/* Modal panel */
+#modal {
+  background: var(--bg-white, #fff);
+  color: var(--text-dark, #111827);
+  border-radius: 12px;
+  width: min(980px, 98%);
+  max-width: 980px;
+  margin-top: 18px;             /* small gap from top of viewport */
+  box-shadow: 0 18px 48px rgba(2,6,23,0.45);
+  position: relative;
+  z-index: 30001;               /* higher than overlay */
+  max-height: calc(100vh - 64px);
+  padding: 18px;
+  box-sizing: border-box;
+  animation: modal-slide-down .28s cubic-bezier(.2,.9,.2,1);
+}
+
+/* Modal entrance */
+@keyframes modal-slide-down {
+  from { transform: translateY(1000px) scale(.995); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1;}
+}
+
+/* Modal structural helpers */
+.modal-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom: 12px;
+}
+.modal-header h2, .modal-header h3 {
+  margin:0;
+  font-family: "Times New Roman", Times, serif;
+  color: var(--text-dark);
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+.modal-sub {
+  color: var(--medium-gray, #6B7280);
+  font-size: 0.95rem;
+  margin-top: 6px;
+}
+
+/* Close button (top-right) */
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--medium-gray, #6B7280);
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.modal-close:hover { background: rgba(0,0,0,0.04); color: var(--text-dark); }
+.modal-close:focus { outline: 3px solid rgba(37,99,235,0.14); outline-offset: 2px; }
+
+/* Modal body and footer */
+.modal-body {
+  padding: 6px 0 12px 0;
+  color: var(--text-dark);
+  font-size: 0.96rem;
+  line-height: 1.45;
+}
+.modal-footer {
+  display:flex;
+  gap:12px;
+  justify-content:flex-end;
+  margin-top: 12px;
+}
+
+/* Form elements inside modal */
+.modal-body form { display:block; gap:10px; }
+.modal-body label { display:block; margin:8px 0 4px 0; font-weight:600; color:var(--text-dark); }
+.modal-body input[type="text"],
+.modal-body input[type="date"],
+.modal-body input[type="search"],
+.modal-body input[type="file"],
+.modal-body textarea,
+.modal-body select {
+  width:100%;
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,0.08);
+  background: var(--bg-white);
+  box-sizing:border-box;
+  font-size:0.95rem;
+  color:var(--text-dark);
+}
+
+/* textarea */
+.modal-body textarea { min-height:90px; resize:vertical; }
+
+/* Modal buttons */
+.btn-primary {
+  background: var(--primary-blue, #2563EB);
+  color: var(--text-light, #fff);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight:700;
+  cursor:pointer;
+}
+.btn-primary:hover { filter: brightness(.95); transform: translateY(-1px); }
+
+.btn-secondary {
+  background: var(--light-gray, #E5E7EB);
+  color: var(--text-dark, #1F2937);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor:pointer;
+  font-weight:700;
+}
+.btn-secondary:hover { background: #dcdcdc; transform: translateY(-1px); }
+
+/* Small utility: image preview inside modal */
+.modal-img {
+  display:block;
+  max-width:320px;
+  max-height:320px;
+  width:auto;
+  height:auto;
+  object-fit:cover;
+  border-radius:8px;
+  box-shadow: 0 6px 20px rgba(2,6,23,0.12);
+  margin:8px 0;
+}
+
+/* Thumbnail container for pending list in modal */
+.pending-thumb {
+  width:80px;
+  height:64px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  border-radius:6px;
+  background:#f3f4f6;
+  border:1px solid rgba(0,0,0,0.04);
+}
+
+/* Add listing modal: two-column layout */
+.add-listing-modal .add-modal-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+/* Add listing modal: three-row layout as requested:
+   1) header row (logo centered + title)
+   2) middle row two-column (left attach image, right main fields)
+   3) bottom row full-width (If LOST / If FOUND fieldsets)
+   footer: action buttons
+*/
+.add-listing-modal {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 0;
+}
+
+/* centered header with logo above the title */
+.modal-header.modal-header-centered {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  padding: 8px 12px 6px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  height: 45px;
+  background: linear-gradient(90deg,#ffffff 1%,
+                            #8B0000 40%);
+  border-radius: 20px;
+}
+.modal-header.modal-header-centered .modal-logo {
+  width:150px;
+  height:48px;
+  object-fit:contain;
+  border-radius:20px;
+  transform: translateY(22px);
+  margin-right: auto;
+
+}
+.modal-header.modal-header-centered .modal-title {
+  font-family: "Times New Roman", Times, serif;
+  font-size:2rem;
+  text-transform: uppercase;
+  font-weight:800;
+  color: var(--text-light);
+transform: translateY(-25px);;
+}
+
+/* form wraps middle + bottom + footer */
+.add-form {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+/* middle row: two columns */
+.add-modal-middle {
+  display:grid;
+  grid-template-columns: 320px 1fr;
+  gap: 18px;
+  align-items:start;
+}
+
+/* left attach area */
+.add-left .img-dropzone {
+  width:100%;
+  min-height:180px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  border-radius:10px;
+  background: linear-gradient(180deg,#fff,#fbfbfb);
+  border:1px dashed rgba(0,0,0,0.06);
+  padding:12px;
+  cursor:pointer;
+  border-color: #111827;
+}
+.add-left .img-dropzone.dragover {
+  border-color: rgba(37,99,235,0.18);
+  box-shadow: 0 8px 24px rgba(37,99,235,0.06);
+}
+.img-placeholder { text-align:center; color:var(--medium-gray); }
+.img-preview { max-width:100%; max-height:220px; border-radius:8px; display:block; margin:0 auto 8px; object-fit:contain; }
+.img-actions { display:flex; gap:8px; justify-content:center; }
+
+/* note under left column */
+.left-note { margin-top:12px; color:var(--medium-gray); font-size:0.95rem; text-align:left; }
+
+/* right column: form inputs spacing */
+.add-right { width:100%; }
+.add-right label { display:block; margin-top:8px; font-weight:600; color:var(--text-dark); }
+.add-right input[type="text"],
+.add-right input[type="date"],
+.add-right select,
+.add-right input {
+  width:auto;
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,0.08);
+  box-sizing:border-box;
+}
+
+  .bottom-fieldset {
+    border: 1.5px solid #ccc;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-top: 10px;
+    background: #fafafa;
+  }
+
+  .bottom-fieldset legend {
+    font-weight: 700;
+    padding: 0 8px;
+  }
+
+  .bottom-fieldset label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.95rem;
+    flex: 1;
+  }
+
+  .fieldset-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .bottom-fieldset input {
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    align-content: center;
+  }
+
+  .bottom-fieldset input:focus {
+    border-color: #007bff;
+    outline: none;
+  }
+
+/* bottom row: full width fieldsets */
+.add-modal-bottom {
+  display:grid;
+  grid-template-columns: 1fr;
+  gap:12px;
+}
+.bottom-fieldset {
+  border:1px solid rgba(0,0,0,0.06);
+  border-radius:8px;
+  padding:12px;
+  background: #fff;
+}
+
+/* footer buttons are handled by .modal-footer already in modals.css but ensure spacing */
+.add-listing-modal .modal-footer {
+  padding-top:6px;
+  border-top: 1px solid rgba(0,0,0,0.04);
+  margin-top:12px;
+  display:flex;
+  gap:8px;
+  justify-content:flex-end
+}
+
+.add-listing-modal .modal-footer > .btn-primary{
+  padding-top:6px;
+  border-top: 1px solid rgba(0,0,0,0.04);
+  transform: translate(280px , -532px);
+  width: 120px;
+  height: 585px;
+  background-color: #8B0000;
+  font-size: larger;
+}
+
+.add-listing-modal .modal-footer > .btn-secondary{
+  padding-top:6px;
+  border-top: 1px solid rgba(0,0,0,0.04);
+  transform: translate(-980px , -532px);
+  width: 120px;
+  height: 585px;
+  font-size: larger;
+}
+
+.add-listing-modal .modal-footer:hover{
+  transform: translateX(-1px);
+}
+
+/* Confirm Delete modal specific styles */
+.confirm-delete-modal {
+  max-width: 1000px;
+  width: 990x;
+  box-sizing: border-box;
+  display: block;
+  align-items: center;
+}
+.confirm-delete-modal .modal-body {
+  padding: 8px 0 0 0;
+}
+.confirm-delete-modal input#confirm-id {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.08);
+  font-size: 0.975rem;
+  margin-top: 6px;
+  box-sizing: border-box;
+}
+
+/* inline error */
+.confirm-error {
+  color: #8B0000;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* danger button */
+.btn-danger {
+  background: var(--primary-red, #8B0000);
+  color: var(--text-light, #fff);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: filter .12s ease, transform .06s ease;
+}
+.btn-danger:hover { filter: brightness(.92); transform: translateY(-1px); }
+
+/* ensure modal footer buttons align right on narrow view */
+@media (max-width:520px) {
+  .modal-footer { flex-direction: column-reverse; gap:10px; align-items: stretch; }
+  .btn-danger, .btn-secondary { width: 100%; }
+}
+
+/* responsive: stack columns on small screens */
+@media (max-width:860px) {
+  .add-listing-modal .add-modal-grid { grid-template-columns: 1fr; }
+  .add-left { order: -1; } /* show image top on mobile */
+  .img-preview { max-height:200px; }
+}
+
+/* responsive: stack on small screens */
+@media (max-width:880px) {
+  .add-modal-middle { grid-template-columns: 1fr; }
+  .add-left { order: -1; } /* show image area above form on mobile */
+  .add-left .img-dropzone { min-height:180px; }
+}
+
+/* keep modal above sticky headers (safety) */
+#modal, .add-listing-modal, #modal * { z-index: 30001; }

@@ -5,12 +5,14 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Lost and Found Management System</title>
   <link rel="icon" href="../images/redpaul.png" type="image/png">
-  <!-- No CSS/design — plain structure only -->
+  <link rel="stylesheet" href="../css/admin.css">
+    <link rel="stylesheet" href="../css/modals.css">
+
 </head>
 <body style="text-align:center; position:relative;">
   <!-- Go Back (role selection) button - top-left -->
   <div style="position:absolute; left:1rem; top:1rem;">
-    <button id="btn-go-back" type="button">← Go Back</button>
+    <img src="../images/pcclogo.png" id="logo" alt="PCC Logo" style="height:40px; vertical-align:middle; margin-right:0.5rem;">
   </div>
 
   <!-- Header -->
@@ -18,7 +20,7 @@
 
   <!-- Controls: Search -->
   <div>
-    <input id="search-input" type="search" placeholder="Search listings"/>
+    <input id="search-input" type="search" placeholder="Search Listings"/>
   </div>
 
   <!-- Tabs -->
@@ -29,29 +31,32 @@
   </div>
 
   <!-- Controls per-tab: category dropdown and sort + admin buttons -->
+<!-- ...existing code... -->
+  <!-- Controls per-tab: category dropdown and sort + admin buttons -->
   <div id="tab-controls">
-    <label>Category:
-      <select id="filter-category">
-        <option value="all">All</option>
+    <div class="controls-left">
+      <select id="filter-category" name="category">
+         <option value="" disabled selected>Category</option>
         <option value="Personal Items">Personal Items</option>
         <option value="Electronics">Electronics</option>
         <option value="Documents">Documents</option>
         <option value="School / Office Supplies">School / Office Supplies</option>
         <option value="Miscellaneous">Miscellaneous</option>
       </select>
-    </label>
 
-    <label>Sort:
-      <select id="sort-order">
+      <select id="sort-order" name="sort">
+         <option value="" disabled selected>Sort Order</option>
         <option value="newest">Newest → Oldest</option>
         <option value="oldest">Oldest → Newest</option>
       </select>
-    </label>
+    </div>
 
-    <button id="btn-add-listing" type="button">Add Listing</button>
-    <button id="btn-review-pending" type="button">Review Pending Listings</button>
+    <div class="controls-right">
+      <button id="btn-add-listing" type="button">+ Add Listing</button>
+      <button id="btn-review-pending" type="button">Review Pending Listings</button>
+    </div>
   </div>
-
+  
   <!-- Tables with updated headers per request -->
   <div id="tables">
     <div id="pane-lost" data-type="lost">

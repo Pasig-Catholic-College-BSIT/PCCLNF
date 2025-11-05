@@ -1,0 +1,140 @@
+/* Full-card 3-column role selector
+   - no visible border
+   - images removed
+   - label centered vertically + horizontally
+   - all columns animate from bottom with staggered "wave"
+*/
+
+:root{
+  --red-dark: #b71c1c;
+  --red-mid: #c62828;
+  --red-light: #ffb4b4;
+  --card-gap: 12px;
+  --radius: 8px;
+  --card-min-height: 320px;
+  --anim-duration: 700ms;
+  --anim-ease: cubic-bezier(.2,.9,.2,1);
+}
+
+*{box-sizing:border-box;font-family:'Times New Roman', Times, serif, Arial, sans-serif}
+
+html,body{
+  height:100%;
+  margin:0;
+  background:#fff;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* make the grid always cover the viewport */
+.role-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:var(--card-gap);
+  padding:24px;
+  height:100vh;
+  min-height:100vh;
+  box-sizing:border-box;
+  align-items:stretch;
+  max-width:1400px;
+  margin:0 auto;
+  overflow:hidden;
+}
+
+/* whole column is a button */
+.role-card{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;   /* center vertically */
+  align-items:center;       /* center horizontally */
+  width:100%;
+  height:100%;
+  min-height:var(--card-min-height);
+  border:none;              /* eliminate border */
+  border-radius:var(--radius);
+  color:#fff;
+  cursor:pointer;
+  padding:16px;
+  text-decoration:none;
+  transition:transform .14s ease, box-shadow .14s ease;
+  box-shadow:none;          /* remove visible shadow / border look */
+  outline:none;
+
+  /* start hidden for animation */
+  opacity:0;
+  transform:translateY(24px);
+  will-change:transform, opacity;
+}
+
+/* label centered in middle */
+.role-card .label{
+  font-weight:800;
+  letter-spacing:1px;
+  margin:0;
+  font-size:2rem;
+  text-align:center;
+  width:100%;
+  padding:8px 12px;
+}
+
+/* per-column colors */
+.role-admin{
+  background: linear-gradient(180deg, var(--red-mid), var(--red-dark));
+}
+.role-faculty{
+  background: linear-gradient(180deg, var(--red-light), #f28a8a);
+  color:#6b0b0b;
+}
+.role-student{
+  background: linear-gradient(180deg, var(--red-mid), var(--red-dark));
+}
+
+/* hover / focus */
+.role-card:hover, .role-card:focus{
+  transform:translateY(-6px);
+  box-shadow:0 10px 28px rgba(0,0,0,0.06);
+}
+.role-card:focus{
+  outline:3px solid rgba(255,255,255,0.12);
+}
+
+/* Entrance animation from bottom (wave) */
+@keyframes slide-in-bottom {
+  from { transform: translateY(36px); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+/* apply bottom animation to all columns with staggered delays (wave) */
+.role-grid > .role-card:nth-child(1) {
+  animation: slide-in-bottom var(--anim-duration) var(--anim-ease) both;
+  animation-delay: 100ms;
+}
+.role-grid > .role-card:nth-child(2) {
+  animation: slide-in-bottom var(--anim-duration) var(--anim-ease) both;
+  animation-delay: 400ms;
+}
+.role-grid > .role-card:nth-child(3) {
+  animation: slide-in-bottom var(--anim-duration) var(--anim-ease) both;
+  animation-delay: 600ms;
+}
+
+/* Respect reduced motion */
+@media (prefers-redumotion: reduce) {
+  .role-grid > .role-card {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* make it responsive: single column on small screens */
+@media (max-width:900px){
+  .role-grid{ grid-template-columns:1fr; padding:12px; height:100vh; }
+  .role-card{ height:100%; min-height:260px; }
+  .role-grid > .role-card:nth-child(1),
+  .role-grid > .role-card:nth-child(2),
+  .role-grid > .role-card:nth-child(3) {
+    animation: slide-in-bottom var(--anim-duration) var(--anim-ease) both;
+    animation-delay: calc(var(--anim-duration) / 5);
+  }
+}

@@ -1,25 +1,16 @@
-// Minimal user-side client that uses same seed data & localStorage keys as admin.js
-const DATA_PATH_CANDIDATES = ['../data/', './data/', 'data/', '/data/'];
+// Minimal user-side client updated: combined Lost + Found listing view, separate Claimed list.
+// Uses same storage keys as admin (pcclnf_*).
+
+const DATA_PATH = '../data/';
 const FILES = { lost: 'lostItems.json', found: 'foundItems.json', claimed: 'claimedItems.json', pending: 'pendingList.json' };
 let store = { lost: [], found: [], claimed: [], pending: [] };
 
-function q(sel, root = document){ return root ? root.querySelector(sel) : null; }
-function qa(sel, root = document){ return root ? Array.from(root.querySelectorAll(sel)) : []; }
+function q(sel, root = document){ try { return (root || document).querySelector(sel); } catch(e){ return null; } }
+function qa(sel, root = document){ try { return Array.from((root || document).querySelectorAll(sel)); } catch(e){ return []; } }
 
 function saveToLocal(key, arr){ try { localStorage.setItem(`pcclnf_${key}`, JSON.stringify(arr)); } catch(e){} }
 function loadFromLocal(key){ try { const v = localStorage.getItem(`pcclnf_${key}`); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
-
-async function fetchJsonFile(name){
-  for (const base of DATA_PATH_CANDIDATES){
-    try {
-      const url = `${base}${name}`;
-      const res = await fetch(url, {cache:"no-store"});
-      if (!res.ok) continue;
-      return await res.json();
-    } catch(e){}
-  }
-  return null;
-}
+async function fetchJsonFile(name){ try { const res = await fetch(`${DATA_PATH}${name}`, {cache:"no-store"}); if(!res.ok) throw new Error(); return await res.json(); } catch(e){ return null; } }
 
 function ensurePendingPid(item){
   if (!item) return;
@@ -30,117 +21,169 @@ function ensurePendingPid(item){
 async function loadAllData(){
   for (const k of ['lost','found','claimed','pending']){
     const local = loadFromLocal(k);
-    if (local && Array.isArray(local) && local.length){
-      store[k] = local;
-    } else {
+    if (local && Array.isArray(local) && local.length) store[k] = local;
+    else {
       const data = await fetchJsonFile(FILES[k]);
       store[k] = Array.isArray(data) ? data : [];
       saveToLocal(k, store[k]);
     }
   }
-  store.pending.forEach(ensurePendingPid);
+  if (Array.isArray(store.pending)) store.pending.forEach(ensurePendingPid);
   saveToLocal('pending', store.pending);
 }
 
-function genId(kind){
-  const prefix = kind === 'lost' ? 'L-' : kind === 'found' ? 'F-' : 'C-';
-  return `${prefix}${Date.now().toString(36).toUpperCase()}`;
-}
-
-function formatDate(val){
+function formatDateOnly(val){
   if (!val) return '—';
   const d = new Date(val);
   if (isNaN(d)) return '—';
   return d.toLocaleDateString();
 }
 
-function cardHtml(item, kind){
+function renderCard(item, kind){
   const header = item.category || '—';
-  const img = item.image ? `<img src="${item.image.startsWith('data:')?item.image:'../images/'+item.image}" class="img">` : `<div class="img">No Image</div>`;
+
+  // determine image src: prefer data: URLs, otherwise treat as filename or absolute URL
+  let src = null;
+  if (item && item.image) {
+    try {
+      if (typeof item.image === 'string') {
+        if (item.image.startsWith('data:')) {
+          src = item.image;
+        } else if (item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('/')) {
+          src = item.image;
+        } else {
+          // assume filename stored, resolve to images folder
+          src = `../images/${item.image}`;
+        }
+      }
+    } catch (e) { src = null; }
+  }
+
+  const imgHtml = src
+    ? `<div class="img"><img src="${src}" alt="image" style="max-width:100%;max-height:160px;object-fit:cover" onerror="this.style.display='none';this.parentNode.innerHTML='<div style=&quot;width:100%;height:160px;background:#eee;display:flex;align-items:center;justify-content:center;color:#777&quot;>No Image</div>'"></div>`
+    : `<div class="img">No Image</div>`;
+
   const dateLabel = kind === 'found' ? (item.dateFound || item.postedAt) : (item.dateLost || item.postedAt);
   const location = item.locationLost || item.locationFound || '—';
-  const posted = item.postedAt ? formatDate(item.postedAt) : (item.submissionDate ? formatDate(item.submissionDate) : '—');
+  const posted = item.postedAt ? formatDateOnly(item.postedAt) : (item.submissionDate ? formatDateOnly(item.submissionDate) : '—');
   const status = item.status || (kind === 'found' ? 'Unclaimed' : 'Unclaimed');
-
+  const idAttr = item.id || '';
   return `
-    <div class="card" data-kind="${kind}" data-id="${item.id || ''}">
-      <div class="head">${header}</div>
-      ${img}
-      <div class="body">
-        <div><strong>${kind === 'found' ? 'Date Found' : 'Date Lost'}:</strong> ${dateLabel ? formatDate(dateLabel) : '—'}</div>
+    <div class="card" style="width:300px;border:1px solid #ddd;border-radius:6px;background:#fff;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04)" data-kind="${kind}" data-id="${idAttr}" data-pid="${item._pid || ''}">
+      <div style="padding:.5rem;background:#f4f6fb;font-weight:600">${header}</div>
+      ${imgHtml}
+      <div style="padding:.6rem;font-size:.9rem;line-height:1.4">
+        <div><strong>${kind === 'found' ? 'Date Found' : 'Date Lost'}:</strong> ${dateLabel ? formatDateOnly(dateLabel) : '—'}</div>
         <div><strong>${kind === 'found' ? 'Found At' : 'Last Seen At'}:</strong> ${location}</div>
         ${ kind === 'found' ? `<div><strong>Stored At:</strong> ${item.storedAt || '—'}</div>` : '' }
-        ${ kind === 'claimed' ? `<div><strong>Claimed By:</strong> ${item.claimedBy || 'Verified'}</div>` : '' }
         <div><strong>Status:</strong> ${status}</div>
         <div><strong>Date Posted:</strong> ${posted}</div>
-        <div class="actions"><button class="btn-view" data-kind="${kind}" data-id="${item.id || ''}">View Details</button></div>
+        <div style="margin-top:.6rem;text-align:right">
+          <button class="btn-view" data-kind="${kind}" data-id="${idAttr}" data-pid="${item._pid || ''}">View Details</button>
+        </div>
       </div>
     </div>
   `;
 }
 
-function applyFilters(list, kind){
-  const searchEl = q('#search-input');
-  const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
-  const catEl = q('#filter-category');
-  const cat = catEl ? catEl.value : 'all';
-  const statusEl = q('#filter-status');
-  const status = statusEl ? statusEl.value : 'all';
-  const sortEl = q('#sort-order');
-  const sort = sortEl ? sortEl.value : 'newest';
+// combined filtering for lost+found items
+function applyFilters(list){
+  const search = (q('#search-input')?.value || '').trim().toLowerCase();
+  const reportFilter = (q('#filter-reportAs')?.value) || 'all';
+  const catFilter = (q('#filter-category')?.value) || 'all';
+  const statusFilter = (q('#filter-status')?.value) || 'all';
+  const sortOrder = (q('#sort-order')?.value) || 'newest';
 
-  return list.filter(it=>{
-    if (cat !== 'all' && it.category !== cat) return false;
-    if (status !== 'all' && it.status && it.status !== status) return false;
+  return list.filter(it => {
+    if (reportFilter !== 'all' && it.__kind !== reportFilter) return false;
+    if (catFilter !== 'all' && (it.category || '') !== catFilter) return false;
+    if (statusFilter !== 'all' && it.status && it.status !== statusFilter) return false;
     if (search){
-      const s = [it.id,it.type,it.brand,it.model,it.category,it.locationLost,it.locationFound,it.reporter,it.foundBy,it.serial,it.status].join(' ').toLowerCase();
-      if (!s.includes(search)) return false;
+      const hay = [it.type, it.brand, it.model, it.color, it.accessories, it.serial, it.locationLost, it.locationFound, it.reporter, it.foundBy, it.storedAt, it.status].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
     }
     return true;
-  }).sort((a,b)=>{
+  }).sort((a,b) => {
     const da = new Date(a.postedAt || a.submissionDate || 0);
     const db = new Date(b.postedAt || b.submissionDate || 0);
-    return sort === 'newest' ? db - da : da - db;
+    return sortOrder === 'newest' ? db - da : da - db;
   });
 }
 
 function renderCards(){
-  const cardsLost = q('#cards-lost');
-  const cardsFound = q('#cards-found');
-  const cardsClaimed = q('#cards-claimed');
-  if (cardsLost) cardsLost.innerHTML = '';
-  if (cardsFound) cardsFound.innerHTML = '';
-  if (cardsClaimed) cardsClaimed.innerHTML = '';
+  const container = q('#cards-items');
+  const claimed = q('#cards-claimed');
+  if (container) container.innerHTML = '';
+  if (claimed) claimed.innerHTML = '';
 
-  const losts = applyFilters(store.lost,'lost');
-  const founds = applyFilters(store.found,'found');
-  const claimed = applyFilters(store.claimed,'claimed');
+  // build combined items array with kind marker
+  const combined = [];
+  (store.lost || []).forEach(i => combined.push(Object.assign({}, i, { __kind: 'lost' })));
+  (store.found || []).forEach(i => combined.push(Object.assign({}, i, { __kind: 'found' })));
 
-  if (cardsLost) losts.forEach(it => cardsLost.insertAdjacentHTML('beforeend', cardHtml(it,'lost')));
-  if (cardsFound) founds.forEach(it => cardsFound.insertAdjacentHTML('beforeend', cardHtml(it,'found')));
-  if (cardsClaimed) claimed.forEach(it => cardsClaimed.insertAdjacentHTML('beforeend', cardHtml(it,'claimed')));
+  const filtered = applyFilters(combined);
+  filtered.forEach(it => container && container.insertAdjacentHTML('beforeend', renderCard(it, it.__kind)));
+
+  // claimed remains separate (unchanged)
+  (store.claimed || []).forEach(it => claimed && claimed.insertAdjacentHTML('beforeend', renderCard(it,'claimed')));
 }
 
-function openModal(html){
-  const modal = q('#modal');
-  const overlay = q('#modal-overlay');
-  if (!overlay) return;
-  if (modal) modal.innerHTML = html;
-  overlay.style.display = '';
+function openModal(html){ const overlay = q('#modal-overlay'), modal = q('#modal'); if (!overlay || !modal) return; modal.innerHTML = html; overlay.style.display = ''; }
+function closeModal(){ const overlay = q('#modal-overlay'), modal = q('#modal'); if (overlay) overlay.style.display = 'none'; if (modal) modal.innerHTML = ''; }
+
+// create generic pending entry and persist + notify admin
+function createPendingEntry(type, payload){
+  const entry = {
+    type: type,
+    payload: payload || {},
+    status: 'Pending',
+    submissionDate: new Date().toISOString()
+  };
+  ensurePendingPid(entry);
+  store.pending = store.pending || [];
+  store.pending.push(entry);
+  saveToLocal('pending', store.pending);
+  try { localStorage.setItem('pcclnf_sync', Date.now().toString()); } catch(e){}
+  // also write full pcclnf_pending for admin sync
+  saveToLocal('pending', store.pending);
+  renderCards();
+  return entry;
 }
-function closeModal(){ const overlay = q('#modal-overlay'); const modal = q('#modal'); if (overlay) overlay.style.display = 'none'; if (modal) modal.innerHTML = ''; }
 
 function openViewDetails(kind, id){
-  const arr = store[kind] || [];
-  const item = arr.find(x=>x.id === id);
-  if (!item) { alert('Item not found'); return; }
+  let item = null;
+  if (id && kind) item = (store[kind] || []).find(x => x.id === id);
+  if (!item && id) item = (store.pending || []).find(x => x._pid === id);
+  if (!item) {
+    for (const k of ['lost','found','claimed','pending']){
+      item = (store[k] || []).find(x => x.id === id || x._pid === id);
+      if (item) { kind = k; break; }
+    }
+  }
+  if (!item) {
+    console.warn('openViewDetails: item not found', { kind, id });
+    return; // fail silently (no alert)
+  }
+
+  // build actions depending on context
+  const actions = [];
+  // If item exists in found collection or has __kind 'found' => allow Claim Item
+  const isFound = (kind === 'found') || (item.__kind === 'found') || (item.status && (item.status.toLowerCase() === 'unclaimed' || item.status.toLowerCase().includes('found')));
+  if (isFound && !(kind === 'claimed')) actions.push(`<button id="btn-claim">Claim Item</button>`);
+  // If item exists in lost collection or __kind 'lost' => allow Report Found Item
+  const isLost = (kind === 'lost') || (item.__kind === 'lost');
+  if (isLost && !(kind === 'claimed')) actions.push(`<button id="btn-report-found">Report Found Item</button>`);
+  // If item is claimed (in claimed collection) allow report false claim
+  const isClaimed = (kind === 'claimed') || (item.status && item.status.toLowerCase() === 'claimed');
+  if (isClaimed) actions.push(`<button id="btn-report-false">Report False Claim</button>`);
+
   const html = `
     <h3>Details</h3>
-    <div style="display:flex;gap:1rem">
-      <div style="flex:1">
-        ${ item.image ? `<img src="${item.image.startsWith('data:')?item.image:'../images/'+item.image}" style="width:100%;max-height:360px;object-fit:cover">` : '<div style="width:100%;height:220px;background:#eee;display:flex;align-items:center;justify-content:center">No Image</div>' }
+    <div style="display:flex;gap:1rem;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px">
+        ${ item.image && typeof item.image === 'string' && item.image.startsWith('data:') ? `<img src="${item.image}" style="width:100%;max-height:360px;object-fit:cover">` : '<div style="width:100%;height:220px;background:#eee;display:flex;align-items:center;justify-content:center">No Image</div>' }
       </div>
-      <div style="flex:1;text-align:left">
+      <div style="flex:1;min-width:260px;text-align:left">
         <p><strong>Category:</strong> ${item.category || '—'}</p>
         <p><strong>Type:</strong> ${item.type || '—'}</p>
         <p><strong>Brand/Model:</strong> ${item.brand || '—'}</p>
@@ -148,25 +191,136 @@ function openViewDetails(kind, id){
         <p><strong>Accessories/Contents:</strong> ${item.accessories || '—'}</p>
         <p><strong>Condition:</strong> ${item.condition || '—'}</p>
         <p><strong>Serial/Unique Mark:</strong> ${item.serial || '—'}</p>
-        <p><strong>${kind === 'found' ? 'Found At' : 'Lost/Last Seen At'}:</strong> ${item.locationFound || item.locationLost || '—'}</p>
-        <p><strong>Date ${kind === 'found' ? 'Found' : 'Lost'}:</strong> ${item.dateFound || item.dateLost || '—'}</p>
-        <p><strong>Status:</strong> ${item.status || (kind==='found'?'Unclaimed':'Unclaimed')}</p>
-        <p><strong>Posted:</strong> ${ item.postedAt ? formatDate(item.postedAt) : (item.submissionDate ? formatDate(item.submissionDate) : '—') }</p>
+        <p><strong>${item.locationFound ? 'Found At' : 'Lost/Last Seen At'}:</strong> ${item.locationFound || item.locationLost || '—'}</p>
+        <p><strong>Date ${item.dateFound ? 'Found' : 'Lost'}:</strong> ${formatDateOnly(item.dateFound || item.dateLost)}</p>
+        <p><strong>Status:</strong> ${item.status || 'Pending'}</p>
+        <p><strong>Reporter/Finder:</strong> ${item.reporter || item.foundBy || '—'}</p>
+        <p><strong>Stored At / Claimed From:</strong> ${item.storedAt || item.claimedFrom || '—'}</p>
+        <p><strong>Remarks:</strong> ${item.remarks || '—'}</p>
         <div style="margin-top:1rem;text-align:right">
-          <button id="btn-close">Close</button>
+          ${actions.join(' ')}
+          <button id="fs-close">Close</button>
         </div>
       </div>
     </div>
   `;
   openModal(html);
-  const closeBtn = q('#btn-close');
-  if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+  // wire action buttons inside modal
+  q('#fs-close')?.addEventListener('click', closeModal);
+  q('#btn-claim')?.addEventListener('click', ()=> openClaimForm(item, kind));
+  q('#btn-report-found')?.addEventListener('click', ()=> openReportFoundForm(item, kind));
+  q('#btn-report-false')?.addEventListener('click', ()=> openFalseClaimForm(item, kind));
+}
+
+// Claim form modal
+function openClaimForm(item, kind){
+  const html = `
+    <h3>Claim Item</h3>
+    <form id="form-claim">
+      <p>Claiming item: <strong>${item.type || item.category || 'Item'}</strong></p>
+      <label>Full Name: <input name="name" required></label><br>
+      <label>Role:
+        <select name="role">
+          <option>Student</option>
+          <option>Faculty</option>
+        </select>
+      </label><br>
+      <label>ID Number: <input name="idNumber"></label><br>
+      <label>Contact Info: <input name="contact"></label><br>
+      <label>Evidence / Description: <textarea name="evidence" rows="3"></textarea></label><br>
+      <label><input type="checkbox" name="declaration" required> I certify I am the rightful owner and information is true.</label><br>
+      <div style="text-align:right;margin-top:.6rem">
+        <button type="submit">Submit Claim Request</button>
+        <button type="button" id="btn-cancel-claim">Cancel</button>
+      </div>
+    </form>
+  `;
+  openModal(html);
+  q('#btn-cancel-claim')?.addEventListener('click', closeModal);
+  q('#form-claim')?.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    const fd = new FormData(q('#form-claim'));
+    const data = Object.fromEntries(fd.entries());
+    const payload = { itemRef: item.id || item._pid, itemSnapshot: item, claimant: data };
+    createPendingEntry('claim-request', payload);
+    closeModal();
+    alert('Claim request submitted. Admin will review.');
+  });
+}
+
+// Report Found form modal
+function openReportFoundForm(item, kind){
+  const html = `
+    <h3>Report Found Item</h3>
+    <form id="form-report-found">
+      <p>Reporting found for item: <strong>${item.type || item.category || 'Item'}</strong></p>
+      <label>Full Name: <input name="name" required></label><br>
+      <label>Role:
+        <select name="role">
+          <option>Student</option>
+          <option>Faculty</option>
+        </select>
+      </label><br>
+      <label>ID Number: <input name="idNumber"></label><br>
+      <label>Contact Info: <input name="contact"></label><br>
+      <label>Date Found: <input type="date" name="dateFound"></label><br>
+      <label>Found At: <input name="locationFound"></label><br>
+      <label>I Will Hand It Over To: <input name="handoverTo"></label><br>
+      <label><input type="checkbox" name="declaration" required> I confirm I found this item and will surrender it.</label><br>
+      <div style="text-align:right;margin-top:.6rem">
+        <button type="submit">Submit Found Report</button>
+        <button type="button" id="btn-cancel-found">Cancel</button>
+      </div>
+    </form>
+  `;
+  openModal(html);
+  q('#btn-cancel-found')?.addEventListener('click', closeModal);
+  q('#form-report-found')?.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    const fd = new FormData(q('#form-report-found'));
+    const data = Object.fromEntries(fd.entries());
+    const payload = { itemRef: item.id || item._pid, itemSnapshot: item, reporter: data };
+    createPendingEntry('found-report', payload);
+    closeModal();
+    alert('Found report submitted. Admin will review.');
+  });
+}
+
+// Report False Claim form modal
+function openFalseClaimForm(item, kind){
+  const html = `
+    <h3>Report False Claim</h3>
+    <form id="form-false-claim">
+      <p>Reporting false claim on: <strong>${item.type || item.category || 'Item'}</strong></p>
+      <label>Your Name: <input name="name" required></label><br>
+      <label>Contact Info: <input name="contact"></label><br>
+      <label>Reason / Explanation: <textarea name="reason" rows="4" required></textarea></label><br>
+      <label><input type="checkbox" name="declaration" required> I request admin review and believe this claim is false.</label><br>
+      <div style="text-align:right;margin-top:.6rem">
+        <button type="submit">Submit Report</button>
+        <button type="button" id="btn-cancel-false">Cancel</button>
+      </div>
+    </form>
+  `;
+  openModal(html);
+  q('#btn-cancel-false')?.addEventListener('click', closeModal);
+  q('#form-false-claim')?.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    const fd = new FormData(q('#form-false-claim'));
+    const data = Object.fromEntries(fd.entries());
+    const payload = { itemRef: item.id || item._pid, itemSnapshot: item, reporter: data };
+    createPendingEntry('false-claim', payload);
+    closeModal();
+    alert('False claim report submitted. Admin will review.');
+  });
 }
 
 function openAddListingModal(){
-  const html = `
+  // reuse previous form markup
+  openModal(`
     <h3>Add Listing</h3>
-    <form id="form-add">
+    <form id="fs-form-add">
       <div>
         <label>Report as:
           <label><input type="radio" name="reportAs" value="lost" checked> LOST</label>
@@ -198,67 +352,59 @@ function openAddListingModal(){
         </label><br>
         <label>Serial / Unique Mark: <input name="serial"></label><br>
       </div>
-      <div id="lost-fields">
+      <div id="fs-lost-fields">
         <h4>If LOST</h4>
         <label>Lost At: <input name="locationLost"></label><br>
         <label>Date Lost: <input name="dateLost" type="date"></label><br>
         <label>Reporter Name: <input name="reporter"></label><br>
         <label>Contact Info: <input name="contact"></label><br>
       </div>
-      <div id="found-fields" style="display:none">
+      <div id="fs-found-fields" style="display:none">
         <h4>If FOUND</h4>
         <label>Found At: <input name="locationFound"></label><br>
         <label>Date Found: <input name="dateFound" type="date"></label><br>
         <label>Found By: <input name="foundBy"></label><br>
         <label>Currently Stored At: <input name="storedAt"></label><br>
       </div>
-
       <div style="margin-top:.6rem">
-        <label>Image (optional): <input type="file" id="file-image"></label><br>
+        <label>Image (optional): <input type="file" id="fs-file-image"></label><br>
       </div>
-
       <div style="margin-top:.6rem">
-        <label><input type="checkbox" id="confirm-false" required> I understand that false or misleading reports may result in suspension.</label><br>
-        <label><input type="checkbox" id="confirm-public" required> I consent to my report being reviewed and made public once approved by an administrator.</label>
+        <label><input type="checkbox" id="fs-confirm-false" required> I understand false or misleading reports may result in suspension.</label><br>
+        <label><input type="checkbox" id="fs-confirm-public" required> I consent to my report being reviewed and made public once approved by an administrator.</label>
       </div>
-
       <div style="text-align:right;margin-top:.6rem">
         <button type="submit">Confirm Submission</button>
-        <button type="button" id="btn-cancel-add">Cancel</button>
+        <button type="button" id="fs-btn-cancel">Cancel</button>
       </div>
     </form>
-  `;
-  openModal(html);
+  `);
 
-  qa('input[name="reportAs"]').forEach(r => r.addEventListener('change', ()=>{
-    const v = q('input[name="reportAs"]:checked') ? q('input[name="reportAs"]:checked').value : 'lost';
-    const lf = q('#lost-fields'), ff = q('#found-fields');
-    if (lf) lf.style.display = v === 'lost' ? '' : 'none';
-    if (ff) ff.style.display = v === 'found' ? '' : 'none';
+  qa('input[name="reportAs"]').forEach(r => r.addEventListener('change', () => {
+    const v = q('input[name="reportAs"]:checked')?.value || 'lost';
+    q('#fs-lost-fields').style.display = v === 'lost' ? '' : 'none';
+    q('#fs-found-fields').style.display = v === 'found' ? '' : 'none';
   }));
 
-  const cancelBtn = q('#btn-cancel-add');
-  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+  q('#fs-btn-cancel')?.addEventListener('click', closeModal);
 
-  const form = q('#form-add');
-  if (form){
-    form.addEventListener('submit', (ev)=>{
-      ev.preventDefault();
-      const fd = new FormData(form);
-      const obj = Object.fromEntries(fd.entries());
-      const fileInput = q('#file-image');
-      if (fileInput && fileInput.files && fileInput.files[0]){
-        const reader = new FileReader();
-        reader.onload = function(e){
-          obj.image = e.target.result;
-          persistPending(obj);
-        };
-        reader.readAsDataURL(fileInput.files[0]);
-      } else {
+  const form = q('#fs-form-add');
+  form?.addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    const fd = new FormData(form);
+    const obj = Object.fromEntries(fd.entries());
+    const fileInput = q('#fs-file-image');
+    if (fileInput && fileInput.files && fileInput.files[0]){
+      const reader = new FileReader();
+      reader.onload = function(e){
+        obj.image = e.target.result;
         persistPending(obj);
-      }
-    });
-  }
+      };
+      reader.readAsDataURL(fileInput.files[0]);
+    } else {
+      persistPending(obj);
+    }
+  });
 }
 
 function persistPending(obj){
@@ -271,67 +417,57 @@ function persistPending(obj){
   ensurePendingPid(pendingItem);
   store.pending.push(pendingItem);
   saveToLocal('pending', store.pending);
-  closeModal();
-  alert('Submitted. Your report is pending admin review.');
   try { localStorage.setItem('pcclnf_sync', Date.now().toString()); } catch(e){}
+  closeModal();
+  console.log('Submitted pending report (no alert).');
   renderCards();
 }
 
 function wire(){
-  // robust global delegation: catches clicks even if elements are re-rendered
-  document.addEventListener('click', (ev) => {
-    const t = ev.target;
-    if (!t) return;
+  // add listing button
+  q('#btn-add-listing')?.addEventListener('click', openAddListingModal);
 
-    // Add Listing button (matches by id anywhere in DOM)
-    const addBtn = t.closest ? t.closest('#btn-add-listing') : null;
-    if (addBtn) {
-      ev.preventDefault();
-      openAddListingModal();
-      return;
-    }
-
-    // View Details buttons (delegated)
-    const viewBtn = t.closest ? t.closest('.btn-view') : null;
-    if (viewBtn) {
-      ev.preventDefault();
-      const kind = viewBtn.dataset.kind;
-      const id = viewBtn.dataset.id;
-      if (kind && id) openViewDetails(kind, id);
-      else alert('Item id missing or invalid');
-      return;
-    }
-
-    // modal overlay background click -> close
-    if (t.id === 'modal-overlay') {
-      closeModal();
-      return;
-    }
+  // filters
+  ['#search-input','#filter-reportAs','#filter-category','#filter-status','#sort-order'].forEach(sel=>{
+    q(sel)?.addEventListener('input', renderCards);
+    q(sel)?.addEventListener('change', renderCards);
   });
 
-  // Inputs that trigger re-render
-  ['#search-input','#filter-category','#filter-status','#sort-order'].forEach(sel=>{
-    const el = q(sel);
-    if (!el) return;
-    el.addEventListener('input', renderCards);
-    el.addEventListener('change', renderCards);
+  // delegated view button clicks
+  document.body.addEventListener('click', (ev) => {
+    const btn = ev.target.closest ? ev.target.closest('.btn-view') : null;
+    if (!btn) return;
+    ev.preventDefault();
+    const kind = btn.getAttribute('data-kind');
+    const id = btn.getAttribute('data-id') || btn.getAttribute('data-pid') || '';
+    if (!id) return alert('Item id missing');
+    openViewDetails(kind, id);
   });
 
-  // close modal on Escape
-  document.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape') closeModal();
-  });
+  // modal overlay click closes
+  q('#modal-overlay')?.addEventListener('click', (ev)=>{ if (ev.target.id === 'modal-overlay') closeModal(); });
 
-  // reload when admin updates localStorage in other tab
+  // storage sync from admin tab
   window.addEventListener('storage', (ev)=>{
     if (!ev.key) return;
-    if (ev.key && ev.key.startsWith('pcclnf_')) {
+    if (ev.key.startsWith('pcclnf_')) {
       const k = ev.key.replace('pcclnf_','');
       try { store[k] = JSON.parse(ev.newValue || '[]'); } catch(e){ store[k] = []; }
       renderCards();
     } else if (ev.key === 'pcclnf_sync') {
       loadAllData().then(renderCards);
     }
+  });
+
+  // expose API for fallback
+  window.openAddListingModal = openAddListingModal;
+  window.openViewDetails = openViewDetails;
+}
+
+function showPane(kind){
+  ['lost','found','claimed'].forEach(k=>{
+    const el = q(`#pane-${k}`);
+    if (el) el.style.display = k === kind ? '' : 'none';
   });
 }
 
@@ -341,13 +477,4 @@ async function init(){
   renderCards();
 }
 
-// auto-run
 document.addEventListener('DOMContentLoaded', init);
-
-// Expose API to window so inline handlers and other scripts can call them reliably.
-// This avoids "function not available" when code runs from different listeners or tabs.
-window.openAddListingModal = openAddListingModal;
-window.openViewDetails = openViewDetails;
-window.loadAllData = loadAllData;
-window.renderCards = renderCards;
-window.persistPending = persistPending;

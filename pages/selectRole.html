@@ -8,23 +8,19 @@
   <link rel="stylesheet" href="../css/selectRole.css">
 </head>
 <body>
-  <!-- Simple 3-column layout using a table (no CSS required) -->
-  <table width="100%" cellpadding="20" cellspacing="0" role="presentation">
-    <tr>
-      <td align="center">
-        <button id="role-admin" type="button" style="width:150px; height:500px;">ADMIN</button>
-        <img src="../images/1.jpg" alt="Admin Icon" width="50" height="50">
-      </td>
-      <td align="center">
-        <button id="role-faculty" type="button" style="width:150px; height:500px;">FACULTY</button>
-        <img src="../images/2.jpg" alt="Faculty Icon" width="50" height="50">
-      </td>
-      <td align="center">
-        <button id="role-student" type="button" style="width:150px; height:500px;">STUDENT</button>
-        <img src="../images/3.jpg" alt="Student Icon" width="50" height="50">
-      </td>
-    </tr>
-  </table>
+  <main class="role-grid" role="region" aria-label="Select role">
+    <button id="role-admin" class="role-card role-admin" type="button" aria-label="Admin">
+      <div class="label">ADMIN</div>
+    </button>
+
+    <button id="role-faculty" class="role-card role-faculty" type="button" aria-label="Faculty">
+      <div class="label">FACULTY</div>
+    </button>
+
+    <button id="role-student" class="role-card role-student" type="button" aria-label="Student">
+      <div class="label">STUDENT</div>
+    </button>
+  </main>
 
   <script src="../js/selectRole.js"></script>
 </body>
