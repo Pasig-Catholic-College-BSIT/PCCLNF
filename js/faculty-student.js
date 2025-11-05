@@ -1,15 +1,25 @@
-// Minimal user-side client: renders cards (lost/found/claimed) and allows Add Listing -> goes to pending list
-
-const DATA_PATH = '../data/';
+// Minimal user-side client that uses same seed data & localStorage keys as admin.js
+const DATA_PATH_CANDIDATES = ['../data/', './data/', 'data/', '/data/'];
 const FILES = { lost: 'lostItems.json', found: 'foundItems.json', claimed: 'claimedItems.json', pending: 'pendingList.json' };
 let store = { lost: [], found: [], claimed: [], pending: [] };
 
-function q(sel, root = document){ return root.querySelector(sel); }
-function qa(sel, root = document){ return Array.from(root.querySelectorAll(sel)); }
+function q(sel, root = document){ return root ? root.querySelector(sel) : null; }
+function qa(sel, root = document){ return root ? Array.from(root.querySelectorAll(sel)) : []; }
 
 function saveToLocal(key, arr){ try { localStorage.setItem(`pcclnf_${key}`, JSON.stringify(arr)); } catch(e){} }
 function loadFromLocal(key){ try { const v = localStorage.getItem(`pcclnf_${key}`); return v ? JSON.parse(v) : null; } catch(e){ return null; } }
-async function fetchJsonFile(name){ try { const res = await fetch(`${DATA_PATH}${name}`, {cache:"no-store"}); if(!res.ok) throw new Error(); return await res.json(); } catch(e){ return null; } }
+
+async function fetchJsonFile(name){
+  for (const base of DATA_PATH_CANDIDATES){
+    try {
+      const url = `${base}${name}`;
+      const res = await fetch(url, {cache:"no-store"});
+      if (!res.ok) continue;
+      return await res.json();
+    } catch(e){}
+  }
+  return null;
+}
 
 function ensurePendingPid(item){
   if (!item) return;
@@ -20,97 +30,109 @@ function ensurePendingPid(item){
 async function loadAllData(){
   for (const k of ['lost','found','claimed','pending']){
     const local = loadFromLocal(k);
-    if (local) store[k] = local;
-    else {
+    if (local && Array.isArray(local) && local.length){
+      store[k] = local;
+    } else {
       const data = await fetchJsonFile(FILES[k]);
       store[k] = Array.isArray(data) ? data : [];
       saveToLocal(k, store[k]);
     }
   }
-  // ensure pending have internal pids (not public)
   store.pending.forEach(ensurePendingPid);
   saveToLocal('pending', store.pending);
 }
 
-// card markup helper
-function renderCard(item, kind){
-  const header = item.category || '—';
-  const img = item.image ? `<img src="${item.image.startsWith('data:')?item.image:'../images/'+item.image}" alt="" style="width:100%;height:160px;object-fit:cover;border-radius:4px 4px 0 0">` :
-              `<div style="width:100%;height:160px;background:#eee;display:flex;align-items:center;justify-content:center;color:#777;border-radius:4px 4px 0 0">No Image</div>`;
+function genId(kind){
+  const prefix = kind === 'lost' ? 'L-' : kind === 'found' ? 'F-' : 'C-';
+  return `${prefix}${Date.now().toString(36).toUpperCase()}`;
+}
 
+function formatDate(val){
+  if (!val) return '—';
+  const d = new Date(val);
+  if (isNaN(d)) return '—';
+  return d.toLocaleDateString();
+}
+
+function cardHtml(item, kind){
+  const header = item.category || '—';
+  const img = item.image ? `<img src="${item.image.startsWith('data:')?item.image:'../images/'+item.image}" class="img">` : `<div class="img">No Image</div>`;
   const dateLabel = kind === 'found' ? (item.dateFound || item.postedAt) : (item.dateLost || item.postedAt);
   const location = item.locationLost || item.locationFound || '—';
-  const posted = item.postedAt ? (new Date(item.postedAt)).toLocaleDateString() : '—';
+  const posted = item.postedAt ? formatDate(item.postedAt) : (item.submissionDate ? formatDate(item.submissionDate) : '—');
   const status = item.status || (kind === 'found' ? 'Unclaimed' : 'Unclaimed');
 
   return `
-    <div class="card" style="width:240px;border:1px solid #ddd;border-radius:6px;background:#fff;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04)">
-      <div style="padding:.5rem;background:#f4f6fb;font-weight:600">${header}</div>
+    <div class="card" data-kind="${kind}" data-id="${item.id || ''}">
+      <div class="head">${header}</div>
       ${img}
-      <div style="padding:.6rem;font-size:.9rem;line-height:1.4">
-        <div><strong>${kind === 'found' ? 'Date Found' : 'Date Lost'}:</strong> ${dateLabel ? (new Date(dateLabel)).toLocaleDateString() : '—'}</div>
+      <div class="body">
+        <div><strong>${kind === 'found' ? 'Date Found' : 'Date Lost'}:</strong> ${dateLabel ? formatDate(dateLabel) : '—'}</div>
         <div><strong>${kind === 'found' ? 'Found At' : 'Last Seen At'}:</strong> ${location}</div>
         ${ kind === 'found' ? `<div><strong>Stored At:</strong> ${item.storedAt || '—'}</div>` : '' }
         ${ kind === 'claimed' ? `<div><strong>Claimed By:</strong> ${item.claimedBy || 'Verified'}</div>` : '' }
         <div><strong>Status:</strong> ${status}</div>
         <div><strong>Date Posted:</strong> ${posted}</div>
-        <div style="margin-top:.6rem;text-align:right">
-          <button data-kind="${kind}" data-id="${item.id || ''}" class="btn-view">View Details</button>
-        </div>
+        <div class="actions"><button class="btn-view" data-kind="${kind}" data-id="${item.id || ''}">View Details</button></div>
       </div>
     </div>
   `;
 }
 
+function applyFilters(list, kind){
+  const searchEl = q('#search-input');
+  const search = searchEl ? searchEl.value.trim().toLowerCase() : '';
+  const catEl = q('#filter-category');
+  const cat = catEl ? catEl.value : 'all';
+  const statusEl = q('#filter-status');
+  const status = statusEl ? statusEl.value : 'all';
+  const sortEl = q('#sort-order');
+  const sort = sortEl ? sortEl.value : 'newest';
+
+  return list.filter(it=>{
+    if (cat !== 'all' && it.category !== cat) return false;
+    if (status !== 'all' && it.status && it.status !== status) return false;
+    if (search){
+      const s = [it.id,it.type,it.brand,it.model,it.category,it.locationLost,it.locationFound,it.reporter,it.foundBy,it.serial,it.status].join(' ').toLowerCase();
+      if (!s.includes(search)) return false;
+    }
+    return true;
+  }).sort((a,b)=>{
+    const da = new Date(a.postedAt || a.submissionDate || 0);
+    const db = new Date(b.postedAt || b.submissionDate || 0);
+    return sort === 'newest' ? db - da : da - db;
+  });
+}
+
 function renderCards(){
-  // clear containers
-  q('#cards-lost').innerHTML = '';
-  q('#cards-found').innerHTML = '';
-  q('#cards-claimed').innerHTML = '';
+  const cardsLost = q('#cards-lost');
+  const cardsFound = q('#cards-found');
+  const cardsClaimed = q('#cards-claimed');
+  if (cardsLost) cardsLost.innerHTML = '';
+  if (cardsFound) cardsFound.innerHTML = '';
+  if (cardsClaimed) cardsClaimed.innerHTML = '';
 
-  const search = q('#search-input').value.trim().toLowerCase();
-  const reportFilter = q('#filter-reportAs').value;
-  const catFilter = q('#filter-category').value;
-  const statusFilter = q('#filter-status').value;
-  const sortOrder = q('#sort-order').value;
+  const losts = applyFilters(store.lost,'lost');
+  const founds = applyFilters(store.found,'found');
+  const claimed = applyFilters(store.claimed,'claimed');
 
-  function applyFilters(list, kind){
-    return list.filter(it => {
-      if (reportFilter !== 'all' && kind !== reportFilter) return false;
-      if (catFilter !== 'all' && catFilter !== '' && it.category !== catFilter) return false;
-      if (statusFilter !== 'all' && it.status && it.status !== statusFilter) return false;
-      if (search){
-        const s = [it.type,it.brand,it.model,it.color,it.accessories,it.serial,it.locationLost,it.locationFound,it.reporter,it.foundBy,it.storedAt,it.status].join(' ').toLowerCase();
-        if (!s.includes(search)) return false;
-      }
-      return true;
-    }).sort((a,b) => {
-      const da = new Date(a.postedAt || a.submissionDate || 0);
-      const db = new Date(b.postedAt || b.submissionDate || 0);
-      return sortOrder === 'newest' ? db - da : da - db;
-    });
-  }
-
-  // show only approved collections (pending not public)
-  const lostList = applyFilters(store.lost, 'lost');
-  lostList.forEach(it => q('#cards-lost').insertAdjacentHTML('beforeend', renderCard(it,'lost')));
-
-  const foundList = applyFilters(store.found, 'found');
-  foundList.forEach(it => q('#cards-found').insertAdjacentHTML('beforeend', renderCard(it,'found')));
-
-  const claimedList = applyFilters(store.claimed, 'claimed');
-  claimedList.forEach(it => q('#cards-claimed').insertAdjacentHTML('beforeend', renderCard(it,'claimed')));
+  if (cardsLost) losts.forEach(it => cardsLost.insertAdjacentHTML('beforeend', cardHtml(it,'lost')));
+  if (cardsFound) founds.forEach(it => cardsFound.insertAdjacentHTML('beforeend', cardHtml(it,'found')));
+  if (cardsClaimed) claimed.forEach(it => cardsClaimed.insertAdjacentHTML('beforeend', cardHtml(it,'claimed')));
 }
 
 function openModal(html){
-  q('#modal').innerHTML = html;
-  q('#modal-overlay').style.display = '';
+  const modal = q('#modal');
+  const overlay = q('#modal-overlay');
+  if (!overlay) return;
+  if (modal) modal.innerHTML = html;
+  overlay.style.display = '';
 }
-function closeModal(){ q('#modal-overlay').style.display = 'none'; q('#modal').innerHTML = ''; }
+function closeModal(){ const overlay = q('#modal-overlay'); const modal = q('#modal'); if (overlay) overlay.style.display = 'none'; if (modal) modal.innerHTML = ''; }
 
 function openViewDetails(kind, id){
-  const arr = store[kind];
-  const item = arr.find(x => x.id === id);
+  const arr = store[kind] || [];
+  const item = arr.find(x=>x.id === id);
   if (!item) { alert('Item not found'); return; }
   const html = `
     <h3>Details</h3>
@@ -128,68 +150,17 @@ function openViewDetails(kind, id){
         <p><strong>Serial/Unique Mark:</strong> ${item.serial || '—'}</p>
         <p><strong>${kind === 'found' ? 'Found At' : 'Lost/Last Seen At'}:</strong> ${item.locationFound || item.locationLost || '—'}</p>
         <p><strong>Date ${kind === 'found' ? 'Found' : 'Lost'}:</strong> ${item.dateFound || item.dateLost || '—'}</p>
-        <p><strong>Status:</strong> ${item.status || 'Unclaimed'}</p>
-        <p><strong>Posted:</strong> ${ item.postedAt ? (new Date(item.postedAt)).toLocaleDateString() : '—' }</p>
+        <p><strong>Status:</strong> ${item.status || (kind==='found'?'Unclaimed':'Unclaimed')}</p>
+        <p><strong>Posted:</strong> ${ item.postedAt ? formatDate(item.postedAt) : (item.submissionDate ? formatDate(item.submissionDate) : '—') }</p>
         <div style="margin-top:1rem;text-align:right">
-          ${ kind !== 'claimed' && (item.status === 'Unclaimed' || item.status === 'Unclaimed' ) ? `<button id="btn-claim" data-kind="${kind}" data-id="${item.id}">Claim Item</button>` : '' }
           <button id="btn-close">Close</button>
         </div>
       </div>
     </div>
   `;
   openModal(html);
-  q('#btn-close').addEventListener('click', closeModal);
-  const claimBtn = q('#btn-claim');
-  if (claimBtn) {
-    claimBtn.addEventListener('click', () => {
-      // open claim form (user fills)
-      openClaimForm(kind, id);
-    });
-  }
-}
-
-function openClaimForm(kind, id){
-  const html = `
-    <h3>Claim Item</h3>
-    <form id="form-claim">
-      <div>
-        <label>Full Name: <input name="fullName" required></label><br>
-        <label>Role: 
-          <select name="role">
-            <option>Student</option>
-            <option>Faculty</option>
-          </select>
-        </label><br>
-        <label>ID Number: <input name="idNumber" required></label><br>
-        <label>Contact: <input name="contact" required></label><br>
-        <label>Proof / Description of Ownership: <textarea name="evidence" rows="3"></textarea></label><br>
-        <label><input type="checkbox" name="declaration" required> I certify that I am the rightful owner.</label><br>
-      </div>
-      <div style="margin-top:.6rem;text-align:right">
-        <button type="submit">Submit Claim Request</button>
-        <button type="button" id="btn-cancel-claim">Cancel</button>
-      </div>
-    </form>
-  `;
-  openModal(html);
-  q('#btn-cancel-claim').addEventListener('click', closeModal);
-  q('#form-claim').addEventListener('submit', (ev) => {
-    ev.preventDefault();
-    // create a claim request => for this simplified implementation we'll add a note to claimed request and set status to 'Claimed' on item (admin still should verify)
-    const fd = new FormData(q('#form-claim'));
-    const requester = Object.fromEntries(fd.entries());
-    // mark item as claimed request (in real app this would notify admin)
-    const arr = store[kind];
-    const idx = arr.findIndex(x=>x.id===id);
-    if (idx === -1){ alert('Item not found'); closeModal(); return; }
-    arr[idx].status = 'Claimed';
-    arr[idx].claimedBy = requester.fullName;
-    arr[idx].lastUpdated = new Date().toISOString();
-    saveToLocal(kind, arr);
-    renderCards();
-    closeModal();
-    alert('Claim request submitted. Admin will verify.');
-  });
+  const closeBtn = q('#btn-close');
+  if (closeBtn) closeBtn.addEventListener('click', closeModal);
 }
 
 function openAddListingModal(){
@@ -243,7 +214,7 @@ function openAddListingModal(){
       </div>
 
       <div style="margin-top:.6rem">
-        <label><input type="file" id="file-image"> (optional image)</label><br>
+        <label>Image (optional): <input type="file" id="file-image"></label><br>
       </div>
 
       <div style="margin-top:.6rem">
@@ -259,33 +230,35 @@ function openAddListingModal(){
   `;
   openModal(html);
 
-  // toggle lost/found fields
-  qa('input[name="reportAs"]').forEach(r => r.addEventListener('change', () => {
-    const v = q('input[name="reportAs"]:checked').value;
-    q('#lost-fields').style.display = v === 'lost' ? '' : 'none';
-    q('#found-fields').style.display = v === 'found' ? '' : 'none';
+  qa('input[name="reportAs"]').forEach(r => r.addEventListener('change', ()=>{
+    const v = q('input[name="reportAs"]:checked') ? q('input[name="reportAs"]:checked').value : 'lost';
+    const lf = q('#lost-fields'), ff = q('#found-fields');
+    if (lf) lf.style.display = v === 'lost' ? '' : 'none';
+    if (ff) ff.style.display = v === 'found' ? '' : 'none';
   }));
 
-  q('#btn-cancel-add').addEventListener('click', closeModal);
+  const cancelBtn = q('#btn-cancel-add');
+  if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
-  q('#form-add').addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const fd = new FormData(q('#form-add'));
-    const obj = Object.fromEntries(fd.entries());
-    // image upload: convert to dataURL (simple)
-    const fileInput = q('#file-image');
-    if (fileInput && fileInput.files && fileInput.files[0]){
-      const f = fileInput.files[0];
-      const reader = new FileReader();
-      reader.onload = function(e){
-        obj.image = e.target.result;
+  const form = q('#form-add');
+  if (form){
+    form.addEventListener('submit', (ev)=>{
+      ev.preventDefault();
+      const fd = new FormData(form);
+      const obj = Object.fromEntries(fd.entries());
+      const fileInput = q('#file-image');
+      if (fileInput && fileInput.files && fileInput.files[0]){
+        const reader = new FileReader();
+        reader.onload = function(e){
+          obj.image = e.target.result;
+          persistPending(obj);
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
         persistPending(obj);
-      };
-      reader.readAsDataURL(f);
-    } else {
-      persistPending(obj);
-    }
-  });
+      }
+    });
+  }
 }
 
 function persistPending(obj){
@@ -294,33 +267,72 @@ function persistPending(obj){
     submissionDate: new Date().toISOString(),
     _kind: 'pending'
   });
-  // remove any public id if present
   if ('id' in pendingItem) delete pendingItem.id;
   ensurePendingPid(pendingItem);
   store.pending.push(pendingItem);
   saveToLocal('pending', store.pending);
   closeModal();
   alert('Submitted. Your report is pending admin review.');
+  try { localStorage.setItem('pcclnf_sync', Date.now().toString()); } catch(e){}
+  renderCards();
 }
 
 function wire(){
-  q('#btn-add-listing').addEventListener('click', openAddListingModal);
+  // robust global delegation: catches clicks even if elements are re-rendered
+  document.addEventListener('click', (ev) => {
+    const t = ev.target;
+    if (!t) return;
 
-  ['#search-input','#filter-reportAs','#filter-category','#filter-status','#sort-order'].forEach(sel => {
-    q(sel).addEventListener('input', renderCards);
-    q(sel).addEventListener('change', renderCards);
+    // Add Listing button (matches by id anywhere in DOM)
+    const addBtn = t.closest ? t.closest('#btn-add-listing') : null;
+    if (addBtn) {
+      ev.preventDefault();
+      openAddListingModal();
+      return;
+    }
+
+    // View Details buttons (delegated)
+    const viewBtn = t.closest ? t.closest('.btn-view') : null;
+    if (viewBtn) {
+      ev.preventDefault();
+      const kind = viewBtn.dataset.kind;
+      const id = viewBtn.dataset.id;
+      if (kind && id) openViewDetails(kind, id);
+      else alert('Item id missing or invalid');
+      return;
+    }
+
+    // modal overlay background click -> close
+    if (t.id === 'modal-overlay') {
+      closeModal();
+      return;
+    }
   });
 
-  // delegate view button clicks
-  document.body.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('.btn-view');
-    if (!btn) return;
-    const kind = btn.dataset.kind;
-    const id = btn.dataset.id;
-    openViewDetails(kind, id);
+  // Inputs that trigger re-render
+  ['#search-input','#filter-category','#filter-status','#sort-order'].forEach(sel=>{
+    const el = q(sel);
+    if (!el) return;
+    el.addEventListener('input', renderCards);
+    el.addEventListener('change', renderCards);
   });
 
-  q('#modal-overlay').addEventListener('click', (ev)=>{ if (ev.target.id === 'modal-overlay') closeModal(); });
+  // close modal on Escape
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') closeModal();
+  });
+
+  // reload when admin updates localStorage in other tab
+  window.addEventListener('storage', (ev)=>{
+    if (!ev.key) return;
+    if (ev.key && ev.key.startsWith('pcclnf_')) {
+      const k = ev.key.replace('pcclnf_','');
+      try { store[k] = JSON.parse(ev.newValue || '[]'); } catch(e){ store[k] = []; }
+      renderCards();
+    } else if (ev.key === 'pcclnf_sync') {
+      loadAllData().then(renderCards);
+    }
+  });
 }
 
 async function init(){
@@ -329,4 +341,13 @@ async function init(){
   renderCards();
 }
 
+// auto-run
 document.addEventListener('DOMContentLoaded', init);
+
+// Expose API to window so inline handlers and other scripts can call them reliably.
+// This avoids "function not available" when code runs from different listeners or tabs.
+window.openAddListingModal = openAddListingModal;
+window.openViewDetails = openViewDetails;
+window.loadAllData = loadAllData;
+window.renderCards = renderCards;
+window.persistPending = persistPending;

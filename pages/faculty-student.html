@@ -3,60 +3,159 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lost and Found Management System</title>
+  <title>WELCOME TO PASIG CATHOLIC COLLEGE - LOST AND FOUND</title>
   <link rel="icon" href="../images/redpaul.png" type="image/png">
+  <style>
+    body{font-family:Segoe UI,Arial,sans-serif;margin:0;padding:1rem;background:#f6f7fb}
+    header.site{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+    header.site h1{margin:0;font-size:1.05rem}
+    .search-row{display:flex;justify-content:center;margin:1rem 0}
+    .search-row input{width:60%;padding:.6rem;border-radius:4px;border:1px solid #ccc}
+    .tabs{display:flex;gap:.5rem;justify-content:center;margin-bottom:1rem}
+    .controls{display:flex;align-items:center;gap:.75rem;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap}
+    .controls .left{display:flex;gap:.75rem;align-items:center}
+    .controls select{padding:.4rem}
+    .controls .right{display:flex;align-items:center}
+    main.panes{padding:0 1rem}
+    .cards{display:flex;flex-wrap:wrap;gap:1rem}
+    .card{width:240px;border:1px solid #ddd;border-radius:6px;background:#fff;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+    .card .head{padding:.5rem;background:#f4f6fb;font-weight:600}
+    .card .img{width:100%;height:160px;object-fit:cover;background:#eee;display:flex;align-items:center;justify-content:center;color:#777}
+    .card .body{padding:.6rem;font-size:.9rem;line-height:1.4}
+    .card .actions{text-align:right;margin-top:.6rem}
+    #modal-overlay{display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:1000}
+    #modal{background:#fff; width:min(900px,96%); margin:3rem auto; padding:1rem; border-radius:6px; max-height:80vh; overflow:auto;}
+    .top-left { position:absolute; left:1rem; top:1rem; }
+  </style>
 </head>
-<body style="font-family:Segoe UI,Arial,sans-serif; margin:0; padding:1rem; background:#f6f7fb;">
+<body>
 
-  <header style="display:flex;align-items:center;justify-content:space-between;">
-    <div>
-      <a href="../pages/admin.html" style="text-decoration:none;">
-        <button type="button">Admin View</button>
-      </a>
-    </div>
+  <div class="top-left">
+    <button id="btn-go-back">← Go Back</button>
+  </div>
 
-    <h2 style="margin:0">WELCOME TO PASIG CATHOLIC COLLEGE - LOST AND FOUND</h2>
-
-    <div>
-      <button id="btn-add-listing">Add New Listing</button>
-    </div>
+  <header class="site" role="banner">
+    <h1>WELCOME TO PASIG CATHOLIC COLLEGE - LOST AND FOUND</h1>
+    <div></div>
   </header>
 
-  <section style="margin-top:1rem; display:flex; gap:1rem; align-items:center;">
-    <input id="search-input" type="search" placeholder="Search by keyword..." style="flex:1; padding:.5rem;">
+  <div class="search-row">
+    <input id="search-input" type="search" placeholder="Search listings (keyword, category, date)"/>
+  </div>
 
-    <select id="filter-category" style="padding:.4rem;">
-      <option value="all">All Categories</option>
-      <option>Personal Items</option>
-      <option>Electronics</option>
-      <option>Documents</option>
-      <option>School / Office Supplies</option>
-      <option>Miscellaneous</option>
-    </select>
+  <div class="tabs" role="tablist" aria-label="Listing tabs">
+    <button id="tab-lost" type="button">LOST</button>
+    <button id="tab-found" type="button">FOUND</button>
+    <button id="tab-claimed" type="button">CLAIMED</button>
+  </div>
 
-    <select id="sort-order" style="padding:.4rem;">
-      <option value="newest">Newest → Oldest</option>
-      <option value="oldest">Oldest → Newest</option>
-    </select>
-  </section>
+  <div class="controls">
+    <div class="left">
+      <label>Category:
+        <select id="filter-category">
+          <option value="all">All</option>
+          <option value="Personal Items">Personal Items</option>
+          <option value="Electronics">Electronics</option>
+          <option value="Documents">Documents</option>
+          <option value="School / Office Supplies">School / Office Supplies</option>
+          <option value="Miscellaneous">Miscellaneous</option>
+        </select>
+      </label>
 
-  <main style="margin-top:1rem;">
-    <h3>Lost Items</h3>
-    <div id="cards-lost" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
+      <label>Sort:
+        <select id="sort-order">
+          <option value="newest">Newest → Oldest</option>
+          <option value="oldest">Oldest → Newest</option>
+        </select>
+      </label>
 
-    <h3 style="margin-top:2rem">Found Items</h3>
-    <div id="cards-found" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
+      <label>Status:
+        <select id="filter-status">
+          <option value="all">All Status</option>
+          <option value="Pending">Pending</option>
+          <option value="Unclaimed">Unclaimed</option>
+          <option value="Lost">Lost</option>
+          <option value="Claimed">Claimed</option>
+          <option value="Returned">Returned</option>
+        </select>
+      </label>
+    </div>
 
-    <h3 style="margin-top:2rem">Claimed Items</h3>
-    <div id="cards-claimed" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
-  </main>
-
-  <!-- modal overlay -->
-  <div id="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:1000;">
-    <div id="modal" style="background:#fff; width:min(760px,96%); margin:3rem auto; padding:1rem; border-radius:6px; max-height:80vh; overflow:auto;">
+    <div class="right">
+      <button id="btn-add-listing" type="button">+ Add New Listing</button>
     </div>
   </div>
 
-  <script src="../js/faculty-student.js"></script>
+  <main class="panes">
+    <section id="pane-lost" data-type="lost">
+      <h3>Lost Items</h3>
+      <div id="cards-lost" class="cards"></div>
+    </section>
+
+    <section id="pane-found" data-type="found" style="display:none">
+      <h3>Found Items</h3>
+      <div id="cards-found" class="cards"></div>
+    </section>
+
+    <section id="pane-claimed" data-type="claimed" style="display:none">
+      <h3>Claimed Items</h3>
+      <div id="cards-claimed" class="cards"></div>
+    </section>
+  </main>
+
+  <div id="modal-overlay">
+    <div id="modal"></div>
+  </div>
+
+  <!-- load user script with defer so it is parsed/executed reliably before DOMContentLoaded fires -->
+  <script src="../js/faculty-student.js" defer></script>
+  <script>
+    // robust fallback wiring — runs after faculty-student.js loads
+    document.addEventListener('DOMContentLoaded', () => {
+      // Add Listing direct handler (fallback if JS delegation misses it)
+      const addBtn = document.getElementById('btn-add-listing');
+      if (addBtn) {
+        addBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (typeof window.openAddListingModal === 'function') window.openAddListingModal();
+          else console.warn('openAddListingModal not available yet');
+        });
+      }
+
+      // Delegated view-details handler (global)
+      document.body.addEventListener('click', (ev) => {
+        const btn = ev.target.closest ? ev.target.closest('.btn-view') : null;
+        if (!btn) return;
+        ev.preventDefault();
+        const kind = btn.dataset.kind;
+        const id = btn.dataset.id;
+        if (!kind || !id) return alert('Item id missing or invalid');
+        if (typeof window.openViewDetails === 'function') window.openViewDetails(kind, id);
+        else console.warn('openViewDetails not available yet');
+      });
+
+      // Tab buttons (ensure they exist)
+      const tabLost = document.getElementById('tab-lost');
+      const tabFound = document.getElementById('tab-found');
+      const tabClaimed = document.getElementById('tab-claimed');
+      function showPane(kind){
+        ['lost','found','claimed'].forEach(k=>{
+          const el = document.getElementById('pane-' + k);
+          if (el) el.style.display = (k === kind) ? '' : 'none';
+        });
+      }
+      if (tabLost) tabLost.addEventListener('click', ()=> showPane('lost'));
+      if (tabFound) tabFound.addEventListener('click', ()=> showPane('found'));
+      if (tabClaimed) tabClaimed.addEventListener('click', ()=> showPane('claimed'));
+
+      // go-back button (top-left)
+      const goBack = document.getElementById('btn-go-back');
+      if (goBack) goBack.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (window.history.length > 1) window.history.back();
+        else window.location.href = '../index.html';
+      });
+    });
+  </script>
 </body>
 </html>

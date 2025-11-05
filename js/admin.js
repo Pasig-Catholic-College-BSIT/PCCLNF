@@ -224,6 +224,37 @@ function wireControls() {
   });
 }
 
+/* ======= Status options helper ======= */
+function statusOptionsHtml(kind, selected) {
+  // kind: 'lost' | 'found' | 'claimed' | 'pending'
+  // For lost reports approved state should be "Lost"
+  // For found reports approved state should be "Unclaimed"
+  const listLost = [
+    {v: 'Pending', t: 'Pending'},
+    {v: 'Lost', t: 'Lost'},
+    {v: 'Claimed', t: 'Claimed'},
+    {v: 'Returned', t: 'Returned'},
+    {v: 'Rejected', t: 'Rejected'}
+  ];
+  const listFound = [
+    {v: 'Pending', t: 'Pending'},
+    {v: 'Unclaimed', t: 'Unclaimed'},
+    {v: 'Claimed', t: 'Claimed'},
+    {v: 'Returned', t: 'Returned'},
+    {v: 'Rejected', t: 'Rejected'}
+  ];
+  const listClaimed = [
+    {v: 'Pending', t: 'Pending'},
+    {v: 'Unclaimed', t: 'Unclaimed'},
+    {v: 'Claimed', t: 'Claimed'},
+    {v: 'Returned', t: 'Returned'}
+  ];
+  let list = listFound;
+  if (kind === 'lost') list = listLost;
+  else if (kind === 'claimed') list = listClaimed;
+  return list.map(o => `<option value="${o.v}" ${o.v === selected ? 'selected' : ''}>${o.t}</option>`).join('');
+}
+
 /* ======= Modals ======= */
 
 function showModal(htmlContent) {
@@ -312,11 +343,7 @@ function openAddListingModal(prefill = null) {
       <div id="status-row" style="${prefill ? '' : 'display:none'}">
         <label>Status:
           <select name="status">
-            <option value="Pending">Pending</option>
-            <option value="Unclaimed">Unclaimed</option>
-            <option value="Claimed">Claimed</option>
-            <option value="Returned">Returned</option>
-            <option value="Rejected">Rejected</option>
+            ${ statusOptionsHtml(initialKind, prefill?.status || 'Pending') }
           </select>
         </label>
       </div>
@@ -335,13 +362,20 @@ function openAddListingModal(prefill = null) {
     const val = frm.reportAs.value;
     q('#lost-fields').style.display = val === 'lost' ? '' : 'none';
     q('#found-fields').style.display = val === 'found' ? '' : 'none';
-    // allow switching reportAs while editing
+    // update status options dynamically when switching reportAs (only if status select visible)
+    const statusSelect = q('select[name="status"]');
+    if (statusSelect) {
+      // preserve current selection if possible
+      const cur = statusSelect.value || 'Pending';
+      statusSelect.innerHTML = statusOptionsHtml(val, cur);
+    }
   }
   toggleFields();
   qa('input[name="reportAs"]', frm).forEach(r => r.addEventListener('change', toggleFields));
 
   if (prefill && prefill.status) {
-    q('select[name="status"]').value = prefill.status;
+    const statusSelect = q('select[name="status"]');
+    if (statusSelect) statusSelect.value = prefill.status;
   }
 
   frm.addEventListener('submit', (ev) => {
@@ -389,11 +423,12 @@ function openAddListingModal(prefill = null) {
             saveToLocal('claimed', store.claimed);
             saveToLocal('pending', store.pending);
           } else {
-            // approve as Unclaimed -> move to lost/found and assign ID
+            // approve -> assign ID and appropriate approved status based on destKind
             const assignedId = genId(destKind);
+            const approvedStatus = destKind === 'lost' ? 'Lost' : 'Unclaimed';
             const approved = Object.assign({}, pendingItem, {
               id: assignedId,
-              status: 'Unclaimed',
+              status: approvedStatus,
               postedAt: new Date().toISOString(),
               lastUpdated: new Date().toISOString(),
               _kind: destKind
@@ -476,7 +511,29 @@ function openAddListingModal(prefill = null) {
           status: obj.status || carr[cidx].status
         });
 
-        if (claimed.status === 'Unclaimed') {
+        // NEW: if admin sets Pending on a claimed item -> move to pending review
+        if (claimed.status === 'Pending') {
+          // remove from claimed
+          carr.splice(cidx, 1);
+          saveToLocal('claimed', carr);
+
+          // prepare pending record (no public id)
+          const pendingItem = Object.assign({}, claimed);
+          delete pendingItem.id;
+          // drop claimed-only fields that don't belong in pending
+          delete pendingItem.originalId;
+          delete pendingItem.dateClaimed;
+          delete pendingItem.claimedFrom;
+          // mark as pending
+          pendingItem.status = 'Pending';
+          pendingItem.submissionDate = new Date().toISOString();
+          pendingItem._kind = 'pending';
+          ensurePendingPid(pendingItem);
+          store.pending.push(pendingItem);
+          saveToLocal('pending', store.pending);
+        }
+        // if admin sets Unclaimed -> revert to lost/found (existing behavior)
+        else if (claimed.status === 'Unclaimed') {
           carr.splice(cidx, 1);
           saveToLocal('claimed', carr);
 
@@ -492,6 +549,7 @@ function openAddListingModal(prefill = null) {
           store[destKind].push(restored);
           saveToLocal(destKind, store[destKind]);
         } else {
+          // otherwise update claimed item in-place (keep on claimed tab)
           carr[cidx] = claimed;
           saveToLocal('claimed', carr);
         }
@@ -694,9 +752,11 @@ function handlePendingApproveByPid(pid) {
   const item = store.pending[idx];
   const destKind = (item.reportAs && (item.reportAs === 'found' ? 'found' : 'lost')) || 'lost';
   const assignedId = genId(destKind);
+  // set approved status depending on destKind
+  const approvedStatus = destKind === 'lost' ? 'Lost' : 'Unclaimed';
   const approved = Object.assign({}, item, {
     id: assignedId,
-    status: 'Unclaimed',
+    status: approvedStatus,
     postedAt: new Date().toISOString(),
     lastUpdated: new Date().toISOString(),
     _kind: destKind
@@ -706,16 +766,6 @@ function handlePendingApproveByPid(pid) {
   store[destKind].push(approved);
   store.pending.splice(idx,1);
   saveToLocal(destKind, store[destKind]);
-  saveToLocal('pending', store.pending);
-  renderAllTables();
-  closeModal();
-}
-
-function handlePendingRejectByPid(pid) {
-  const idx = findPendingIndexByPid(pid);
-  if (idx === -1) return;
-  if (!confirm('Reject this pending listing?')) return;
-  store.pending.splice(idx,1);
   saveToLocal('pending', store.pending);
   renderAllTables();
   closeModal();
