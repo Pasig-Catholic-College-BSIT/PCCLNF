@@ -1,4 +1,4 @@
-# 🧭 Lost and Found System
+# 🧭 Lost and Found System (DESIGN PHASE :))
 
 ## Project Title
 **Lost and Found System**  
@@ -29,4 +29,9 @@ Traditional lost and found processes rely on manual recording and physical logs,
 ## License
 This project is licensed under the **[MIT License](https://opensource.org/licenses/MIT)**.  
 You may use, modify, and distribute this project freely with proper attribution. 
+
+Members: 2B
+Sebastian, Khristom
+Songalia, Bernie JR.
+Matondo, Carl G.
 
