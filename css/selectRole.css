@@ -9,7 +9,7 @@
   --red-dark: #b71c1c;
   --red-mid: #c62828;
   --red-light: #ffb4b4;
-  --card-gap: 12px;
+  --card-gap: 1.5px;
   --radius: 8px;
   --card-min-height: 320px;
   --anim-duration: 700ms;
@@ -31,7 +31,6 @@ html,body{
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:var(--card-gap);
-  padding:24px;
   height:100vh;
   min-height:100vh;
   box-sizing:border-box;
@@ -54,7 +53,6 @@ html,body{
   border-radius:var(--radius);
   color:#fff;
   cursor:pointer;
-  padding:16px;
   text-decoration:none;
   transition:transform .14s ease, box-shadow .14s ease;
   box-shadow:none;          /* remove visible shadow / border look */
@@ -79,14 +77,15 @@ html,body{
 
 /* per-column colors */
 .role-admin{
-  background: linear-gradient(180deg, var(--red-mid), var(--red-dark));
+  background: linear-gradient(180deg, var(--red-mid) 0%, var(--red-dark) 100%);
 }
 .role-faculty{
-  background: linear-gradient(180deg, var(--red-light), #f28a8a);
-  color:#6b0b0b;
+  background-color: rgb(148, 147, 147);
+  color: var(--text-dark);
 }
+
 .role-student{
-  background: linear-gradient(180deg, var(--red-mid), var(--red-dark));
+  background: linear-gradient(180deg, var(--red-mid) 0%, var(--red-dark) 50%);
 }
 
 /* hover / focus */
@@ -104,17 +103,22 @@ html,body{
   to   { transform: translateY(0);     opacity: 1; }
 }
 
+@keyframes slide-in-top {
+  from { transform: translateY(-36px); opacity: 0; }
+  to   { transform: translateY(0px);     opacity: 1; }
+}
+
 /* apply bottom animation to all columns with staggered delays (wave) */
 .role-grid > .role-card:nth-child(1) {
   animation: slide-in-bottom var(--anim-duration) var(--anim-ease) both;
-  animation-delay: 100ms;
+  animation-delay: 600ms;
 }
 .role-grid > .role-card:nth-child(2) {
   animation: slide-in-bottom var(--anim-duration) var(--anim-ease) both;
-  animation-delay: 400ms;
+  animation-delay: 200ms;
 }
 .role-grid > .role-card:nth-child(3) {
-  animation: slide-in-bottom var(--anim-duration) var(--anim-ease) both;
+  animation: slide-in-top var(--anim-duration) var(--anim-ease) both;
   animation-delay: 600ms;
 }
 
