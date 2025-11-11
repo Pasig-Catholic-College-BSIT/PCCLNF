@@ -254,7 +254,7 @@ transform: translateY(-25px);;
   box-shadow: 0 8px 24px rgba(37,99,235,0.06);
 }
 .img-placeholder { text-align:center; color:var(--medium-gray); }
-.img-preview { max-width:100%; max-height:220px; border-radius:8px; display:block; margin:0 auto 8px; object-fit:contain; }
+.img-preview { max-width:100%; max-height:100px; border-radius:8px; display:block; margin:0 auto 8px; object-fit:contain; }
 .img-actions { display:flex; gap:8px; justify-content:center; }
 
 /* note under left column */
@@ -327,33 +327,90 @@ transform: translateY(-25px);;
   background: #fff;
 }
 
+.add-right .category-status-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: nowrap;        /* keep them on one line */
+  margin-top: 8px;
+  margin-left: 30px;          /* removed previous left offset */
+}
+
+/* each label becomes a flexible column (like your Type/Brand row) */
+.add-right .category-status-row > label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  flex: 1;                 /* equal width columns */
+  min-width: 0;            /* allow inputs to shrink properly */
+}
+
+/* selects should fill their label column */
+.add-right .category-status-row select,
+.add-right .category-status-row input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-sizing: border-box;
+  font-weight: 600;
+}
+
+/* fallback on narrow screens: stack vertically like other controls */
+@media (max-width: 720px) {
+  .add-right .category-status-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .add-right .category-status-row > label { flex: none; }
+}
+
 /* footer buttons are handled by .modal-footer already in modals.css but ensure spacing */
 .add-listing-modal .modal-footer {
-  padding-top:6px;
-  border-top: 1px solid rgba(0,0,0,0.04);
-  margin-top:12px;
-  display:flex;
-  gap:8px;
-  justify-content:flex-end
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(0,0,0,0.05);
+  background: #fafafa;
+  position: sticky;
+  bottom: 0;
 }
 
-.add-listing-modal .modal-footer > .btn-primary{
-  padding-top:6px;
-  border-top: 1px solid rgba(0,0,0,0.04);
-  transform: translate(280px , -532px);
-  width: 120px;
-  height: 585px;
-  background-color: #8B0000;
-  font-size: larger;
+.add-listing-modal .modal-footer .btn-primary {
+  background: #8B0000;
+  color: #fff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s ease-in-out;
 }
 
-.add-listing-modal .modal-footer > .btn-secondary{
-  padding-top:6px;
-  border-top: 1px solid rgba(0,0,0,0.04);
-  transform: translate(-980px , -532px);
-  width: 120px;
-  height: 585px;
-  font-size: larger;
+.add-listing-modal .modal-footer .btn-primary:hover {
+  filter: brightness(0.9);
+  transform: translateY(-1px);
+}
+
+.add-listing-modal .modal-footer .btn-secondary {
+  background: #e5e7eb;
+  color: #111827;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s ease-in-out;
+}
+
+.add-listing-modal .modal-footer .btn-secondary:hover {
+  background: #dcdcdc;
+  transform: translateY(-1px);
 }
 
 /* Confirm Delete modal specific styles */
@@ -489,4 +546,126 @@ transform: translateY(-22px);}
 }
 .modal-body2 p {
     margin: 0;
+}
+
+.pending-modal {
+  width: min(980px, 98%);
+  max-width: 980px;
+  box-sizing: border-box;
+  background: var(--bg-white, #fff);
+  border-radius: 12px;
+  padding: 12px;
+  color: var(--text-dark);
+  z-index: 40000;
+}
+
+/* header: centered logo + title + count */
+
+.pending-modal .pending-count {
+  margin-left:8px;
+  font-weight:700;
+  color:var(--primary-blue);
+  font-size:0.95rem;
+}
+
+/* controls row */
+.pending-modal .pending-controls {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  margin:10px 0;
+  justify-content: space-between;
+  flex-wrap:wrap;
+}
+.pending-modal .pending-controls .left,
+.pending-modal .pending-controls .right {
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.pending-modal .pending-controls input[type="search"],
+.pending-modal .pending-controls select {
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,0.08);
+  background:var(--bg-white);
+}
+
+/* list container */
+.pending-modal .pending-list {
+  max-height: calc(60vh);
+  overflow:auto;
+  border-radius:8px;
+  border:1px solid rgba(0,0,0,0.04);
+  background:transparent;
+}
+
+/* sticky list header */
+.pending-modal .pending-list .list-head {
+  display:grid;
+  grid-template-columns: 80px 1fr 220px;
+  gap:12px;
+  padding:10px 12px;
+  background: linear-gradient(180deg,#f8fafc,#ffffff);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom:1px solid rgba(0,0,0,0.04);
+  font-weight:800;
+}
+
+/* each item row */
+.pending-modal .pending-list .pending-item {
+  display:grid;
+  grid-template-columns: 80px 1fr 220px;
+  gap:12px;
+  padding:10px 12px;
+  align-items:center;
+  border-bottom:1px solid rgba(0,0,0,0.04);
+}
+.pending-modal .pending-list .pending-item .thumb {
+  width:72px;
+  height:54px;
+  border-radius:6px;
+  overflow:hidden;
+  background:#f3f4f6;
+  display:inline-block;
+  border:1px solid rgba(0,0,0,0.04);
+}
+.pending-modal .pending-list .pending-item .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+
+.pending-modal .pending-list .pending-item .details { text-align:left; }
+.pending-modal .pending-list .pending-item .details .meta { color:var(--medium-gray); font-size:0.9rem; }
+
+.pending-modal .pending-list .pending-item .actions {
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  align-items:center;
+}
+.pending-modal .pending-list button {
+  padding:8px 10px;
+  border-radius:8px;
+  font-weight:700;
+  border: none;
+  cursor: pointer;
+}
+.pending-modal .btn-approve { background:green; color:var(--text-light); }
+.pending-modal .btn-reject  { color:#fff; background:#8B0000; border:1px solid rgba(0,0,0,0.06); }
+.pending-modal .btn-view    { background:transparent; color:var(--text-dark); border:1px dashed rgba(0,0,0,0.06); }
+.pending-modal .btn-edit    { background:orange; color:white; }
+
+/* empty state */
+.pending-modal .pending-empty { padding:20px; text-align:center; color:var(--medium-gray); }
+
+/* footer */
+.pending-modal .modal-footer { display:flex; justify-content:flex-end; gap:12px; margin-top:12px; border-top:1px solid rgba(0,0,0,0.04); padding-top:12px; }
+
+/* responsive */
+@media (max-width:720px) {
+  .pending-modal .pending-list .list-head,
+  .pending-modal .pending-list .pending-item {
+    grid-template-columns: 64px 1fr;
+  }
+  .pending-modal .pending-list .pending-item .actions { grid-column: 1 / -1; justify-content:flex-start; gap:6px; }
 }

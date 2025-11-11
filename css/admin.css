@@ -120,8 +120,9 @@ h1 {
 /* tabs wrapper - keep them on one row and justify */
 div > button[id^="tab-"] {
   display: inline-block;
+  position: relative;
   padding: 11px 180px;
-  margin-right: 6px;
+  margin-left: 5px;
   border-radius: 30px 30px 0 0;
   cursor: pointer;
   border: none;

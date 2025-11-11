@@ -1,6 +1,35 @@
 // Minimal user-side client updated: combined Lost + Found listing view, separate Claimed list.
 // Uses same storage keys as admin (pcclnf_*).
 
+
+const header = document.getElementById('h2');
+
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 50) {
+    header.classList.add('scrolled');
+  } else {
+    header.classList.remove('scrolled');
+  }
+});
+
+
+let lastScrollY = window.scrollY;
+const header2 = document.getElementById('h2');
+
+window.addEventListener('scroll', () => {
+  const currentScrollY = window.scrollY;
+
+  if (currentScrollY < lastScrollY && currentScrollY > 50) {
+    // Scrolling up and header is about to exit
+    header2.classList.add('exit');
+  } else {
+    header2.classList.remove('exit');
+  }
+
+  lastScrollY = currentScrollY;
+});
+
+
 const DATA_PATH = '../data/';
 const FILES = { lost: 'lostItems.json', found: 'foundItems.json', claimed: 'claimedItems.json', pending: 'pendingList.json' };
 let store = { lost: [], found: [], claimed: [], pending: [] };
@@ -60,7 +89,7 @@ function renderCard(item, kind){
   }
 
   const imgHtml = src
-    ? `<div class="img"><img src="${src}" alt="image" style="max-width:100%;max-height:160px;object-fit:cover" onerror="this.style.display='none';this.parentNode.innerHTML='<div style=&quot;width:100%;height:160px;background:#eee;display:flex;align-items:center;justify-content:center;color:#777&quot;>No Image</div>'"></div>`
+    ? `<div class="img"><img src="${src}" alt="image" style="max-width:100%;max-height:160px;object-fit:cover;justify-content:center" onerror="this.style.display='none';this.parentNode.innerHTML='<div style=&quot;width:100%;height:160px;background:#eee;display:flex;align-items:center;justify-content:center;color:#777&quot;>No Image</div>'"></div>`
     : `<div class="img">No Image</div>`;
 
   const dateLabel = kind === 'found' ? (item.dateFound || item.postedAt) : (item.dateLost || item.postedAt);
@@ -172,7 +201,7 @@ function openViewDetails(kind, id){
   if (isFound && !(kind === 'claimed')) actions.push(`<button id="btn-claim">Claim Item</button>`);
   // If item exists in lost collection or __kind 'lost' => allow Report Found Item
   const isLost = (kind === 'lost') || (item.__kind === 'lost');
-  if (isLost && !(kind === 'claimed')) actions.push(`<button id="btn-report-found">Report Found Item</button>`);
+  if (isLost && !(kind === 'claimed')) actions.push(`<button id="btn-report-found">I Have the Lost Item</button>`);
   // If item is claimed (in claimed collection) allow report false claim
   const isClaimed = (kind === 'claimed') || (item.status && item.status.toLowerCase() === 'claimed');
   if (isClaimed) actions.push(`<button id="btn-report-false">Report False Claim</button>`);

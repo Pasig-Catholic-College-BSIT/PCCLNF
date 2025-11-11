@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="../css/modals.css">
 
 </head>
-<body style="text-align:center; position:relative;">
+<body style="text-align:center; position:absolute;">
   <!-- Go Back (role selection) button - top-left -->
   <div style="position:absolute; left:1rem; top:1rem;">
     <img src="../images/pcclogo.png" id="logo" alt="PCC Logo" style="height:40px; vertical-align:middle; margin-right:0.5rem;">
@@ -35,7 +35,7 @@
   <!-- Controls per-tab: category dropdown and sort + admin buttons -->
   <div id="tab-controls">
     <div class="controls-left">
-      <select id="filter-category" name="category">
+      <select id="filter-category" placeholder="Category">
          <option value="" disabled selected>Category</option>
         <option value="Personal Items">Personal Items</option>
         <option value="Electronics">Electronics</option>
@@ -87,7 +87,7 @@
             <th>Category</th>
             <th>Date Found</th>
             <th>Found At</th>
-            <th>Currently Stored At</th>
+            <th>Reported By</th>
             <th>Status</th>
             <th></th>
             <th></th>
@@ -105,8 +105,8 @@
             <th>Image</th>
             <th>Category</th>
             <th>Date Claimed</th>
-            <th>Claimed By</th>
-            <th>Claimed From</th>
+            <th>Lost / Found At</th>
+            <th>Reported By</th>
             <th>Status</th>
             <th></th>
             <th></th>

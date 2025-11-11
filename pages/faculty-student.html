@@ -5,19 +5,17 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Lost & Found — Faculty / Student</title>
   <link rel="icon" href="../images/redpaul.png" type="image/png">
+
+  <link rel="stylesheet" href="../css/faculty-student.css" />
 </head>
-<body style="font-family:Segoe UI,Arial,sans-serif; margin:0; padding:1rem; background:#f6f7fb;">
-
-  <div style="position:absolute; left:1rem; top:1rem;">
-    <a href="../pages/admin.html" style="text-decoration:none;"><button type="button">Admin View</button></a>
-  </div>
-
-  <header style="display:flex;align-items:center;justify-content:space-between;">
-    <h1 style="margin:0">WELCOME TO PASIG CATHOLIC COLLEGE - LOST AND FOUND</h1>
-    <div><button id="btn-add-listing">+ Add New Listing</button></div>
+<body>
+  <header>
+    <img src="../images/pcclogo.png" alt="PCC Logo">
+    <h1 style="margin:0">THE LOST AND FOUND SYSTEM</h1>
+    <div><button id="btn-add-listing">+ Add Listing</button></div>
   </header>
 
-  <section style="margin-top:1rem; display:flex; gap:1rem; align-items:center;">
+  <section>
     <input id="search-input" type="search" placeholder="Search by keyword, category, or date..." style="flex:1; padding:.5rem;">
     <select id="filter-reportAs" style="padding:.4rem;">
       <option value="all">All Types</option>
@@ -34,7 +32,7 @@
     </select>
     <select id="filter-status" style="padding:.4rem;">
       <option value="all">All Status</option>
-      <option value="Pending">Pending</option>
+      <option value="Lost">Lost</option>
       <option value="Unclaimed">Unclaimed</option>
       <option value="Claimed">Claimed</option>
       <option value="Returned">Returned</option>
@@ -46,10 +44,10 @@
   </section>
 
   <main style="margin-top:1rem;">
-    <h3 style="margin-top:1.5rem">Items (Lost & Found)</h3>
+    <h2 id="h2">Reported Lost and Found Items</h2>
     <div id="cards-items" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
 
-    <h3 style="margin-top:2rem">Claimed Items</h3>
+    <h2>Claimed Items</h2>
     <div id="cards-claimed" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
   </main>
 

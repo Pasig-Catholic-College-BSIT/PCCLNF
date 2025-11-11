@@ -230,7 +230,7 @@ function renderTable(kind) {
       <td>${thumbnailHtml(it)}</td>
       <td>${it.category || '—'}</td>
       <td>${formatDateForColumn(it)}</td>
-      <td>${it.locationLost || it.locationFound || '—'}</td>
+      <td>${it.locationLost || it.locationFound || '—' }</td>
       <td>${getReporterOrStored(it)}</td>
       <td>${it.status || 'Unclaimed'}</td>
       <td>
@@ -261,15 +261,6 @@ function wireControls() {
   q('#tab-lost').addEventListener('click', () => showPane('lost'));
   q('#tab-found').addEventListener('click', () => showPane('found'));
   q('#tab-claimed').addEventListener('click', () => showPane('claimed'));
-
-  const goBackBtn = q('#btn-go-back');
-  if (goBackBtn) {
-    goBackBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (window.history.length > 1) window.history.back();
-      else window.location.href = '../index.html';
-    });
-  }
 
   q('#search-input').addEventListener('input', () => renderAllTables());
   q('#filter-category').addEventListener('change', () => renderAllTables());
@@ -403,12 +394,21 @@ function openAddListingModal(prefill = null) {
                 </label>
               </div>
 
-              <label>Category:
-                <select name="category" required>
-                  <option value="" disabled selected>-- select category --</option>
-                  ${categoryOptionsHtml(prefill?.category || '')}
-                </select>
-              </label>
+              <div class="category-status-row">
+                <label>
+                  <select name="category" required>
+                    <option value="" disabled selected>Select Category</option>
+                    ${categoryOptionsHtml(prefill?.category || '')}
+                  </select>
+                </label>
+
+                <!-- show status only when editing (prefill present) -->
+                <label ${prefill ? '' : 'style="display:none"'} >
+                  <select name="status" aria-label="Status">
+                    ${ statusOptionsHtml(initialKind, prefill?.status || 'Pending') }
+                  </select>
+                </label>
+              </div>
 
               <div style="display:flex;">
                 <label style="flex:1">Type: <input name="type" value="${prefill?.type || ''}"></label>
@@ -984,93 +984,199 @@ function openDeleteConfirm(kind, id) {
 function openReviewPendingModal() {
   const list = store.pending || [];
   const sorted = list.slice().sort((a,b)=> parseDateFlexible(b)-parseDateFlexible(a));
-  let html = `<h3>Pending Listings (${sorted.length})</h3><div style="text-align:left">`;
-  if (sorted.length === 0) html += '<p>No pending listings</p>';
-  for (const it of sorted) {
-    ensurePendingPid(it);
-    const thumb = it.image ? (it.image.startsWith('data:') ? `<img src="${it.image}" width="80" style="object-fit:cover">` : `<img src="../images/${it.image}" width="80" style="object-fit:cover" onerror="this.style.display=\'none\'">`) : '—';
-    html += `
-      <div style="border:1px solid #ddd;padding:8px;margin:6px;display:flex;gap:8px;align-items:center">
-        <div style="flex:0 0 90px">${thumb}</div>
-        <div style="flex:1">
-          <strong>[ ${it.type||'Item'} ] ${it.category || ''} – ${it.brand || ''}</strong><br>
-          Reported by: ${it.reporter || it.foundBy || '—'}<br>
-          Date: ${formatDateForColumn(it)}<br>
-          Status: ${it.status || 'Pending'}<br>
-          <div style="margin-top:6px">
-            <button data-paction="view" data-pid="${it._pid}">View Details</button>
-            <button data-paction="approve" data-pid="${it._pid}">Approve</button>
-            <button data-paction="reject" data-pid="${it._pid}">Reject</button>
-            <button data-paction="edit" data-pid="${it._pid}">Edit Before Approving</button>
+  const count = sorted.length;
+
+  let html = `
+    <div class="pending-modal">
+      <div class="modal-header modal-header-centered" style="gap:8px;padding-bottom:8px;">
+        <img class="modal-logo" src="../images/pcclogo.png" alt="logo" />
+        <h2 class="modal-title">Pending Listings</h2>
+      </div>
+
+      <div class="modal-body">
+        <div class="pending-controls">
+          <div class="left">
+            <input id="pending-search" type="search" placeholder="Search pending..." />
+            <select id="pending-filter">
+              <option value="all">All categories</option>
+              <option value="Personal Items">Personal Items</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Documents">Documents</option>
+              <option value="School / Office Supplies">School / Office Supplies</option>
+              <option value="Miscellaneous">Miscellaneous</option>
+            </select>
+          </div>
+          <div class="right">
+            <button id="pending-refresh" class="btn-secondary">Refresh</button>
           </div>
         </div>
+
+        <div class="pending-list" id="pending-list">
+          <div class="list-head">
+            <div>Image</div><div>Details</div><div style="text-align:center">Actions</div>
+          </div>
+          ${ sorted.length === 0 ? `<div class="pending-empty">No pending listings</div>` : sorted.map(it => {
+            const thumb = it.image ? (it.image.startsWith('data:') ? `<img src="${it.image}" alt="" />` : `<img src="../images/${it.image}" alt="" onerror="this.style.display='none'">`) : '';
+            return `
+              <div class="pending-item" data-pid="${it._pid}">
+                <div class="thumb">${ thumb || '—' }</div>
+                <div class="details">
+                  <strong>${it.type || 'Item'} ${it.category ? `— ${it.category}` : ''}</strong>
+                  <div class="meta">Reported by: ${it.reporter || it.foundBy || '—'} · ${formatDateForColumn(it)} · Status: ${it.status || 'Pending'}</div>
+                </div>
+                <div class="actions">
+                  <button class="btn-view" data-paction="view" data-pid="${it._pid}">View</button>
+                  <button class="btn-edit" data-paction="edit" data-pid="${it._pid}">Edit</button>
+                  <button class="btn-approve" data-paction="approve" data-pid="${it._pid}">Approve</button>
+                  <button class="btn-reject" data-paction="reject" data-pid="${it._pid}">Reject</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
       </div>
-    `;
-  }
-  html += `</div><div style="margin-top:1rem"><button id="close-pending">Close</button></div>`;
+
+      <div class="modal-footer">
+        <button id="pending-close-footer" class="btn-secondary">Close</button>
+      </div>
+    </div>
+  `;
   showModal(html);
 
   const modal = q('#modal');
+
+  // delegated click handling for pending item actions
   modal.addEventListener('click', (ev) => {
     const btn = ev.target.closest('button');
     if (!btn) return;
     const pa = btn.dataset.paction;
     const pid = btn.dataset.pid;
-    if (!pa) return;
+    if (!pa) {
+      // handle other controls
+      if (btn.id === 'pending-refresh') {
+        // reload content
+        openReviewPendingModal();
+      }
+      if (btn.id === 'pending-close' || btn.id === 'pending-close-footer') closeModal();
+      return;
+    }
     const pidx = findPendingIndexByPid(pid);
     const item = pidx >= 0 ? store.pending[pidx] : null;
+    if (!item) return;
+
     if (pa === 'view') {
-      if (item) openPendingDetailModal(item);
-      else return;
-    }
-    if (pa === 'approve') {
-      if (item) handlePendingApproveByPid(pid);
-      else return;
-    }
-    if (pa === 'reject') {
-      if (item) handlePendingRejectByPid(pid);
-      else return;
+      openPendingDetailModal(pid);
+      return;
     }
     if (pa === 'edit') {
-      if (item) {
-        const copy = Object.assign({}, item, {_kind: item.reportAs || 'lost', _pid: item._pid});
-        openAddListingModal(copy);
-      } else return;
+      // open edit modal prefilled (openAddListingModal handles editing)
+      const copy = Object.assign({}, item, {_kind: item.reportAs || 'lost', _pid: item._pid});
+      openAddListingModal(copy);
+      return;
+    }
+    if (pa === 'approve') {
+      handlePendingApproveByPid(pid);
+      return;
+    }
+    if (pa === 'reject') {
+      handlePendingRejectByPid(pid);
+      return;
     }
   }, {once:false});
 
-  q('#close-pending').addEventListener('click', closeModal);
+  // search/filter wiring
+  q('#pending-search')?.addEventListener('input', (e) => {
+    const term = e.target.value.trim().toLowerCase();
+    Array.from(q('#pending-list').querySelectorAll('.pending-item')).forEach(row => {
+      const txt = row.querySelector('.details').innerText.toLowerCase();
+      row.style.display = term && !txt.includes(term) ? 'none' : '';
+    });
+  });
+  q('#pending-filter')?.addEventListener('change', (e) => {
+    const val = e.target.value;
+    Array.from(q('#pending-list').querySelectorAll('.pending-item')).forEach(row => {
+      const pid = row.dataset.pid;
+      const it = store.pending.find(x => x._pid === pid) || {};
+      row.style.display = (val === 'all' || it.category === val) ? '' : 'none';
+    });
+  });
+
+  q('#pending-close')?.addEventListener('click', closeModal);
+  q('#pending-close-footer')?.addEventListener('click', closeModal);
 }
 
-function openPendingDetailModal(item) {
-  const imgHtml = item.image ? (item.image.startsWith('data:') ? `<img src="${item.image}" width="200">` : `<img src="../images/${item.image}" width="200" onerror="this.style.display='none'">`) : '';
+function openPendingDetailModal(pidOrItem) {
+  // accept either pid string or the item object
+  const item = (typeof pidOrItem === 'string') ? (store.pending.find(p => p._pid === pidOrItem)) : pidOrItem;
+  if (!item) {
+    console.warn('openPendingDetailModal: pending item not found', pidOrItem);
+    return;
+  }
+
+  const imgSrc = item.image
+    ? (typeof item.image === 'string' && item.image.startsWith('data:') ? item.image : `../images/${item.image}`)
+    : '';
+
   const html = `
-    <h3>Pending — (no public id)</h3>
-    <div style="text-align:left">
-      ${imgHtml}
-      <p><strong>Report Type:</strong> ${item.reportAs || '—'}</p>
-      <p><strong>Category:</strong> ${item.category || '—'}</p>
-      <p><strong>Type:</strong> ${item.type || '—'}</p>
-      <p><strong>Brand/Model:</strong> ${item.brand || '—'}</p>
-      <p><strong>Reporter/Finder:</strong> ${item.reporter || item.foundBy || '—'}</p>
-      <p><strong>Contact:</strong> ${item.contact || '—'}</p>
-      <p><strong>Submitted:</strong> ${formatDateOnly(item.submissionDate || item.postedAt || item.createdAt)}</p>
-      <p><strong>Notes:</strong> ${item.notes || '—'}</p>
-    </div>
-    <div style="margin-top:1rem">
-      <button id="pending-approve">Approve</button>
-      <button id="pending-reject">Reject</button>
-      <button id="pending-close">Close</button>
+    <div class="add-listing-modal view-modal pending-detail-modal">
+      <div class="modal-header modal-header-centered">
+        <img class="modal-logo" src="../images/pcclogo.png" alt="logo" />
+        <h2 class="modal-title">Details ${item._pid ? `— ${item._pid}` : ''}</h2>
+      </div>
+
+      <div class="view-form">
+        <div class="add-modal-middle">
+          <aside class="add-left" style="padding:8px;">
+            ${ imgSrc
+              ? `<div class="img-preview-wrap"><img id="view-image" class="img-preview" src="${imgSrc}" alt="item image"></div>`
+              : `<div class="img-placeholder" style="padding:18px;color:var(--medium-gray)">No image available</div>` }
+            <div class="modal-body2">
+              <hr style="border:0;border-top:1px solid var(--light-gray)">
+              <h3 style="margin:10px 0 6px;color:var(--primary)">Status Info</h3>
+              <p><strong>Status:</strong> ${ item.status || 'Pending' }</p>
+              <p><strong>Submitted:</strong> ${ formatDateOnly(item.submissionDate || item.postedAt || item.createdAt) }</p>
+              <p><strong>Last Updated:</strong> ${ formatDateOnly(item.lastUpdated) }</p>
+            </div>
+          </aside>
+
+          <section class="view-right">
+            <div class="modal-body">
+              <h3 style="color:var(--primary)">Item Details</h3>
+              <p><strong> Category:</strong> ${ item.category || '—' }</p>
+              <p><strong> Type:</strong> ${ item.type || '—' }</p>
+              <p><strong> Brand / Model:</strong> ${ item.brand || '—' }</p>
+              <p><strong> Color:</strong> ${ item.color || '—' }</p>
+              <p><strong> Accessories / Contents:</strong> ${ item.accessories || '—' }</p>
+              <p><strong> Condition:</strong> ${ item.condition || '—' }</p>
+              <p><strong> Serial / Unique Mark:</strong> ${ item.serial || '—' }</p>
+
+              <hr style="border:0;border-top:1px solid var(--light-gray)">
+
+              <h3 style="margin:10px 0 6px;color:var(--primary)">Discovery Info</h3>
+              <p><strong>Report Type:</strong> ${ (item.reportAs || '—').toUpperCase() }</p>
+              <p><strong>Reporter / Finder:</strong> ${ item.reporter || item.foundBy || '—' }</p>
+              <p><strong>Contact:</strong> ${ item.contact || '—' }</p>
+              <p><strong>Location Found / Lost:</strong> ${ item.locationFound || item.locationLost || '—' }</p>
+              <p><strong>Date Found / Lost:</strong> ${ formatDateForColumn(item) }</p>
+
+              <hr style="border:0;border-top:1px solid var(--light-gray)">
+
+              <h3 style="color:var(--primary)">Additional Notes</h3>
+              <div style="color:var(--medium-gray); margin-top:6px;">${ item.notes || item.description || '—' }</div>
+            </div>
+          </section>
+        </div>
+
+        <div class="modal-close" style="margin-top:10px">
+          <button id="close-details" class="btn-viewclose">Close</button>
+        </div>
+      </div>
     </div>
   `;
   showModal(html);
-  q('#pending-close').addEventListener('click', closeModal);
-  q('#pending-approve').addEventListener('click', () => {
-    handlePendingApproveByPid(item._pid);
-  });
-  q('#pending-reject').addEventListener('click', () => {
-    handlePendingRejectByPid(item._pid);
-  });
+
+  // wire action buttons
+  q('#close-details')?.addEventListener('click', closeModal)
 }
 
 /* ======= Approve / Reject handlers ======= */
