@@ -1,63 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Lost and Found Management System</title>
   <link rel="icon" href="../images/redpaul.png" type="image/png">
-  <link rel="stylesheet" href="../css/admin.css">
-    <link rel="stylesheet" href="../css/modals.css">
+  
+  <link rel="stylesheet" href="../css/admin.css" />
+  <link rel="stylesheet" href="../css/modals.css" />
 
 </head>
-<body style="text-align:center; position:absolute;">
-  <!-- Go Back (role selection) button - top-left -->
-  <div style="position:absolute; left:1rem; top:1rem;">
-    <img src="../images/pcclogo.png" id="logo" alt="PCC Logo" style="height:40px; vertical-align:middle; margin-right:0.5rem;">
-  </div>
 
-  <!-- Header -->
-  <h1>WELCOME TO PASIG CATHOLIC COLLEGE - LOST AND FOUND</h1>
+<body>
 
-  <!-- Controls: Search -->
-  <div>
-    <input id="search-input" type="search" placeholder="Search Listings"/>
-  </div>
-
-  <!-- Tabs -->
-  <div>
-    <button id="tab-lost" type="button">LOST</button>
-    <button id="tab-found" type="button">FOUND</button>
-    <button id="tab-claimed" type="button">CLAIMED ITEMS</button>
-  </div>
-
-  <!-- Controls per-tab: category dropdown and sort + admin buttons -->
-<!-- ...existing code... -->
-  <!-- Controls per-tab: category dropdown and sort + admin buttons -->
-  <div id="tab-controls">
-    <div class="controls-left">
-      <select id="filter-category" placeholder="Category">
-         <option value="" disabled selected>Category</option>
-        <option value="Personal Items">Personal Items</option>
-        <option value="Electronics">Electronics</option>
-        <option value="Documents">Documents</option>
-        <option value="School / Office Supplies">School / Office Supplies</option>
-        <option value="Miscellaneous">Miscellaneous</option>
-      </select>
-
-      <select id="sort-order" name="sort">
-         <option value="" disabled selected>Sort Order</option>
-        <option value="newest">Newest → Oldest</option>
-        <option value="oldest">Oldest → Newest</option>
-      </select>
-    </div>
-
-    <div class="controls-right">
+  <header>
+    <img src="../images/pcclogo.png" id="logo" alt="PCC Logo">
+    <h1>LOST AND FOUND MANAGEMENT SYSTEM</h1>
+    <div id="butons">
       <button id="btn-add-listing" type="button">+ Add Listing</button>
       <button id="btn-review-pending" type="button">Review Pending Listings</button>
     </div>
-  </div>
-  
-  <!-- Tables with updated headers per request -->
+  </header>
+
+  <section>
+    <input id="search-input" type="search" placeholder="Search by keyword, category, or date...">
+    <select id="filter-category" placeholder="Category">
+      <option value="" disabled selected>Category</option>
+      <option value="Personal Items">Personal Items</option>
+      <option value="Electronics">Electronics</option>
+      <option value="Documents">Documents</option>
+      <option value="School / Office Supplies">School / Office Supplies</option>
+      <option value="Miscellaneous">Miscellaneous</option>
+    </select>
+    <select id="sort-order" name="sort">
+      <option value="" disabled selected>Sort Order</option>
+      <option value="newest">Newest → Oldest</option>
+      <option value="oldest">Oldest → Newest</option>
+    </select>
+  </section>
+
+  <nav>
+    <button id="tab-lost" type="button">LOST</button>
+    <button id="tab-found" type="button">FOUND</button>
+    <button id="tab-claimed" type="button">CLAIMED ITEMS</button>
+  </nav>
+
+
   <div id="tables">
     <div id="pane-lost" data-type="lost">
       <table id="table-lost" border="1" width="100%" style="text-align:center">
@@ -117,14 +106,12 @@
     </div>
   </div>
 
-  <!-- Modals (hidden containers toggled by JS) -->
-  <div id="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.2);">
+  <div id="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:1000;">
     <div id="modal" style="background:#fff; margin:3rem; padding:1rem;">
-      <!-- injected content -->
     </div>
   </div>
 
-  <!-- Script -->
   <script src="../js/admin.js"></script>
 </body>
+
 </html>

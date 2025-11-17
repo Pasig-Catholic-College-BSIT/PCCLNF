@@ -1,22 +1,3 @@
-/* Admin UI behaviour for admin.html
-   - Loads JSON datasets (falls back to localStorage for persistence)
-   - Renders LOST / FOUND / CLAIMED tables
-   - Search, category filter, sort
-   - Add Listing modal (lost / found)
-   - View Details modal
-   - Update Listing modal
-   - Delete with typed-ID confirmation
-   - Pending review modal with Approve / Reject / Edit
-
-   Improvements:
-   - show images for pending, view and tables
-   - support data: URLs and ../images/filename
-   - read file as dataURL when admin uploads and preserve image
-   - compress large dataURLs before saving to localStorage
-   - safer localStorage save with fallback to strip images if quota exceeded
-   - removed alert() calls (console warnings instead)
-*/
-
 const DATA_PATH = '../data/';
 const FILES = {
   lost: 'lostItems.json',
@@ -45,7 +26,6 @@ function findPendingIndexByPid(pid) {
 }
 
 /* ======= Utilities & Data Layer ======= */
-
 function parseDateFlexible(item) {
   const keys = ['dateLost', 'dateFound', 'dateClaimed', 'postedAt', 'datePosted', 'date', 'submissionDate'];
   for (const k of keys) {
@@ -148,7 +128,6 @@ function safeSaveCollection(key, arr) {
       }
     }
     if (saveToLocal(key, copy)) {
-      // update in-memory collection to reflect images stripped
       store[key] = copy;
       return true;
     }
@@ -169,14 +148,12 @@ function safeSaveCollection(key, arr) {
 }
 
 /* ======= Rendering ======= */
-
 function q(sel, root = document) { return root.querySelector(sel); }
 function qa(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
 
 function thumbnailHtml(item) {
   if (item && item.image) {
     const src = (typeof item.image === 'string' && item.image.startsWith('data:')) ? item.image : `../images/${item.image}`;
-    // use onerror to show placeholder
     return `<img src="${src}" alt="img" width="60" style="object-fit:cover" onerror="this.style.display='none'">`;
   }
   return '—';
@@ -250,7 +227,6 @@ function renderAllTables() {
 }
 
 /* ======= Tab & Controls wiring ======= */
-
 function showPane(kind) {
   ['lost','found','claimed'].forEach(k => {
     q(`#pane-${k}`).style.display = k === kind ? '' : 'none';
@@ -325,7 +301,6 @@ function closeModal() {
 }
 
 /* ======= Add / Update Listing ======= */
-
 function openAddListingModal(prefill = null) {
   const initialKind = prefill ? prefill._kind || (prefill.id && prefill.id.startsWith('F-')? 'found' : 'lost') : 'lost';
 
@@ -349,16 +324,15 @@ function openAddListingModal(prefill = null) {
     return conditionOptions.map(c => `<option value="${c}" ${selected === c ? 'selected' : ''}>${c}</option>`).join('');
   }
 
-  // new modal structure:
-  // 1) header row with centered logo + title
-  // 2) middle row: left attach image, right main form fields
-  // 3) bottom row: full-width LOST / FOUND fieldset(s)
-  // footer: action buttons
   const title = prefill ? 'Update Listing' : 'Add Listing';
   const html = `
     <div class="add-listing-modal">
       <div class="modal-header modal-header-centered">
-        <img class="modal-logo" src="../images/pcclogo.png" alt="logo" /><h2 class="modal-title">${title}</h2>
+        <img class="modal-logo" src="../images/pcclogo.png" alt="logo" /><h1>${title}</h1>
+          <div>
+          <button type="submit" class="btn-primary">${prefill ? 'Save Changes' : 'Submit Listing'}</button>
+          <button type="button" id="cancel" class="btn-secondary">Cancel</button>
+          </div>
       </div>
 
       <form id="form-add" enctype="multipart/form-data" class="add-form">
@@ -369,8 +343,8 @@ function openAddListingModal(prefill = null) {
               <input type="file" id="image-file" name="imageFile" accept="image/*" style="display:none">
               <div class="img-placeholder" id="img-placeholder">
                 <div class="img-instructions">
-                  <div style="font-weight:700;margin-bottom:6px">${prefill ? 'Replace image' : 'Attach image'}</div>
-                  <div style="font-size:0.9rem;color:var(--medium-gray)">${prefill ? 'Click / drop to replace the image.' : 'Click or drop an image here. Optional but recommended.'}</div>
+                  <div>${prefill ? 'Replace image' : 'Attach image'}</div>
+                  <div>${prefill ? 'Click / drop to replace the image.' : 'Click or drop an image here. Optional but recommended.'}</div>
                 </div>
               </div>
 
@@ -383,55 +357,72 @@ function openAddListingModal(prefill = null) {
             </label>
           </aside>
 
-          <section class="add-right">
-            <div class="right-top">
-              <div style="display:flex;gap:125px;margin-bottom:8px;align-items:center;justify-content:center;">
-                <label style="font-weight:700;display:flex;gap:6px;align-items:center">
-                  <input type="radio" name="reportAs" value="lost" ${initialKind==='lost' ? 'checked' : ''}> REPORT AS LOST
-                </label>
-                <label style="font-weight:700;display:flex;gap:6px;align-items:center">
-                  <input type="radio" name="reportAs" value="found" ${initialKind==='found' ? 'checked' : ''}> REPORT AS FOUND
-                </label>
-              </div>
+<section class="add-right">
+  <div class="right-top">
 
-              <div class="category-status-row">
-                <label>
-                  <select name="category" required>
-                    <option value="" disabled selected>Select Category</option>
-                    ${categoryOptionsHtml(prefill?.category || '')}
-                  </select>
-                </label>
+    <!-- LOST / FOUND RADIO -->
+    <div class="report-choice">
+      <label>
+        <input type="radio" name="reportAs" value="lost" ${initialKind==='lost' ? 'checked' : ''}>
+        REPORT AS LOST
+      </label>
+      <label>
+        <input type="radio" name="reportAs" value="found" ${initialKind==='found' ? 'checked' : ''}>
+        REPORT AS FOUND
+      </label>
+    </div>
 
-                <!-- show status only when editing (prefill present) -->
-                <label ${prefill ? '' : 'style="display:none"'} >
-                  <select name="status" aria-label="Status">
-                    ${ statusOptionsHtml(initialKind, prefill?.status || 'Pending') }
-                  </select>
-                </label>
-              </div>
+    <!-- CATEGORY + STATUS -->
+    <div class="category-status-row">
+      <label>
+        <select name="category" required>
+          <option value="" disabled selected>Select Category</option>
+          ${categoryOptionsHtml(prefill?.category || '')}
+        </select>
+      </label>
 
-              <div style="display:flex;">
-                <label style="flex:1">Type: <input name="type" value="${prefill?.type || ''}"></label>
-                <label style="flex:1">Brand / Model: <input name="brand" value="${prefill?.brand || ''}"></label>
-              </div>
+      <label ${prefill ? '' : 'style="display:none"'}>
+        <select name="status" aria-label="Status">
+          ${statusOptionsHtml(initialKind, prefill?.status || 'Pending')}
+        </select>
+      </label>
+    </div>
 
-              <div style="display:flex;">
-                <label style="flex:1">Color: <input name="color" value="${prefill?.color || ''}"></label>
-                <label style="flex:1">Contents: <input name="accessories" value="${prefill?.accessories || ''}"></label>
-              </div>
+    <!-- ONE DIV FOR ALL ITEM PROPERTIES -->
+    <div class="item-details">
 
-              <div style="display:flex;">
-                <label style="flex:1">Condition:
-                  <select name="condition">
-                    <option value="" disabled selected>-- select condition --</option>
-                    ${conditionOptionsHtml(prefill?.condition || '')}
-                  </select>
-                </label>
+      <label>Type:
+        <input name="type" value="${prefill?.type || ''}">
+      </label>
 
-                <label style="flex:1">Unique Mark: <input name="serial" value="${prefill?.serial || ''}"></label>
-              </div>
-            </div>
-          </section>
+      <label>Brand / Model:
+        <input name="brand" value="${prefill?.brand || ''}">
+      </label>
+
+      <label>Color:
+        <input name="color" value="${prefill?.color || ''}">
+      </label>
+
+      <label>Contents:
+        <input name="accessories" value="${prefill?.accessories || ''}">
+      </label>
+
+      <label>Condition:
+        <select name="condition" id="condition-select">
+          <option value="" disabled selected>-- select condition --</option>
+          ${conditionOptionsHtml(prefill?.condition || '')}
+        </select>
+      </label>
+
+      <label>Unique Mark:
+        <input name="serial" value="${prefill?.serial || ''}">
+      </label>
+
+    </div>
+
+  </div>
+</section>
+
         </div>
 
         <div class="add-modal-bottom">
@@ -481,11 +472,6 @@ function openAddListingModal(prefill = null) {
         </div>
 
         <input type="hidden" id="existing-image" name="existingImage" value="${prefill?.image ? prefill.image : ''}">
-
-        <div class="modal-footer">
-          <button type="submit" class="btn-primary">${prefill ? 'Save Changes' : 'Submit Listing'}</button>
-          <button type="button" id="cancel" class="btn-secondary">Cancel</button>
-        </div>
       </form>
     </div>
   `;
@@ -568,7 +554,6 @@ function openAddListingModal(prefill = null) {
     qa('input[name="reportAs"]', frm).forEach(r => r.addEventListener('change', toggleFields));
   }
 
-  // submit handler preserved from previous logic (uses fileInput & existing-image)
   if (frm) {
     frm.addEventListener('submit', async (ev) => {
       ev.preventDefault();
@@ -825,10 +810,11 @@ function openViewModal(kind, id) {
     : '';
 
   const html = `
-    <div class="add-listing-modal view-modal">
+    <div class="view-modal">
       <div class="modal-header modal-header-centered">
         <img class="modal-logo" src="../images/pcclogo.png" alt="logo" />
-        <h2 class="modal-title">Details of ITEM — ${item.id || ''}</h2>
+        <h1 class="modal-title">ITEM ${item.id || ''}</h1>
+        <button id="close-details" class="btn-viewclose">Close</button>
       </div>
 
       <div class="view-form">
@@ -836,20 +822,19 @@ function openViewModal(kind, id) {
           <aside class="add-left" style="padding:8px;">
             ${ imgSrc ? `<div class="img-preview-wrap"><img id="view-image" class="img-preview" src="${imgSrc}" alt="item image"></div>` : `<div class="img-placeholder" style="padding:18px;color:var(--medium-gray)">No image available</div>` }
           <div class="modal-body2">
-              <hr style="border:0;border-top:1px solid var(--light-gray)">
 
               <!-- 🟥 STATUS INFO -->
-              <h3 style="margin:10px 0 6px;color:var(--primary)">Status Info</h3>
+              <h3>Status Info</h3>
               <p><strong>Status:</strong> ${ item.status || '—' }</p>
               <p><strong>Posted:</strong> ${ formatDateOnly(item.postedAt || item.createdAt) }</p>
               <p><strong>Last Updated:</strong> ${ formatDateOnly(item.lastUpdated) }</p>
-            </div>
+              </div>
             </aside>
 
           <section class="view-right">
             <div class="modal-body">
               <!-- 🟩 ITEM DETAILS -->
-              <h3 style="color:var(--primary)">Item Details</h3>
+              <h3>Item Details</h3>
               <p><strong> Category:</strong> ${ item.category || '—' }</p>
               <p><strong> Type:</strong> ${ item.type || '—' }</p>
               <p><strong> Brand / Model:</strong> ${ item.brand || '—' }</p>
@@ -858,33 +843,24 @@ function openViewModal(kind, id) {
               <p><strong> Condition:</strong> ${ item.condition || '—' }</p>
               <p><strong> Serial / Unique Mark:</strong> ${ item.serial || '—' }</p>
 
-              <hr style="border:0;border-top:1px solid var(--light-gray)">
-
               <!-- 🟦 DISCOVERY INFO -->
-              <h3 style="margin:10px 0 6px;color:var(--primary)">Discovery Info</h3>
+              <h3>Discovery Info</h3>
               <p><strong>Report Type:</strong> ${ (item.reportAs || kind || '').toUpperCase() }</p>
               <p><strong>Reported By:</strong> ${ item.reporter || item.foundBy || '—' }</p>
               <p><strong>Contact:</strong> ${ item.contact || '—' }</p>
               <p><strong>Location Found / Lost:</strong> ${ item.locationFound || item.locationLost || '—' }</p>
               <p><strong>Date Found / Lost:</strong> ${ formatDateForColumn(item) }</p>
-
-              <hr style="border:0;border-top:1px solid var(--light-gray)">
-
+              
               <!-- 🟨 CLAIM INFORMATION -->
-              <h3 style=;color:var(--primary)">Claim Information</h3>
+              <h3>Claim Information</h3>
               <p><strong>Claimed By:</strong> ${ item.claimedBy || '—' }</p>
               <p><strong>Claimed Date:</strong> ${ item.claimedAt ? formatDateOnly(item.claimedAt) : '—' }</p>
+              <hr class="divider-line">
               </div>
           </section>
         </div>
-
-
-
-        <div class="modal-close" style="margin-top:10px">
-          <button id="close-details" class="btn-viewclose">Close</button>
-        </div>
       </div>
-    </div>s
+    </div>
   `;
   showModal(html);
 
@@ -909,9 +885,11 @@ function openUpdateModal(kind, id) {
 function openDeleteConfirm(kind, id) {
   const html = `
     <div class="confirm-delete-modal">
-      <div class="modal-header modal-header-centered" style="gap:8px;padding-bottom:8px;">
+      <div class="modal-header modal-header-centered">
         <img class="modal-logo" src="../images/pcclogo.png" alt="logo" />
         <h2 class="modal-title">Delete Listing</h2>
+                <button id="cancel-delete" class="btn-secondary">Cancel</button>
+
       </div>
 
       <div class="modal-body" style="text-align:center">
@@ -928,7 +906,6 @@ function openDeleteConfirm(kind, id) {
 
       <div class="modal-footer">
         <button id="do-delete" class="btn-danger">Delete</button>
-        <button id="cancel-delete" class="btn-secondary">Cancel</button>
       </div>
     </div>
   `;
@@ -988,9 +965,10 @@ function openReviewPendingModal() {
 
   let html = `
     <div class="pending-modal">
-      <div class="modal-header modal-header-centered" style="gap:8px;padding-bottom:8px;">
+      <div class="modal-header modal-header-centered">
         <img class="modal-logo" src="../images/pcclogo.png" alt="logo" />
         <h2 class="modal-title">Pending Listings</h2>
+        <button id="pending-close-footer" class="btn-secondary">Close</button>
       </div>
 
       <div class="modal-body">
@@ -1034,10 +1012,6 @@ function openReviewPendingModal() {
             `;
           }).join('')}
         </div>
-      </div>
-
-      <div class="modal-footer">
-        <button id="pending-close-footer" class="btn-secondary">Close</button>
       </div>
     </div>
   `;
@@ -1121,7 +1095,8 @@ function openPendingDetailModal(pidOrItem) {
     <div class="add-listing-modal view-modal pending-detail-modal">
       <div class="modal-header modal-header-centered">
         <img class="modal-logo" src="../images/pcclogo.png" alt="logo" />
-        <h2 class="modal-title">Details ${item._pid ? `— ${item._pid}` : ''}</h2>
+        <h1 class="modal-title"> ${item._pid ? ` ${item._pid}` : ''}</h1>
+          <button id="close-details" class="btn-viewclose">Close</button>
       </div>
 
       <div class="view-form">
@@ -1165,10 +1140,6 @@ function openPendingDetailModal(pidOrItem) {
               <div style="color:var(--medium-gray); margin-top:6px;">${ item.notes || item.description || '—' }</div>
             </div>
           </section>
-        </div>
-
-        <div class="modal-close" style="margin-top:10px">
-          <button id="close-details" class="btn-viewclose">Close</button>
         </div>
       </div>
     </div>
