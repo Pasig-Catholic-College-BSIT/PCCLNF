@@ -1,0 +1,725 @@
+/* Fixed, flat CSS for user-side modals (no nesting/Sass).
+   Ensures .view-details-modal uses a two-column grid with responsive fallback.
+*/
+
+/* modal overlay and container */
+#modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+#modal {
+  background-color: #ffffff;
+  border-radius: 50px;
+  padding: 1rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* view-details modal surface */
+.view-details-modal {
+  background-color: #ffffff;
+  color: #111;
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+/* header */
+.view-details-modal .modal-header-centered {
+  display: flex;
+  align-items: center;
+  border-radius: 50px;
+  background: linear-gradient(100deg, #ffffff 0%, #8B0000 50%);
+  color: #fff;
+    padding: 1rem;
+    width: 800px;
+}
+
+/* logo in header */
+.view-details-modal .modal-logo {
+  height: 40px;
+  object-fit: contain;
+}
+
+/* header title */
+.view-details-modal h1 {
+    flex: 1;
+    text-align: center;
+    margin: 0;
+    text-transform: uppercase;
+}
+
+/* header close button */
+.view-details-modal #fs-close {
+  background-color: white;
+  color: #8B0000;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  margin-right: .5rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+.view-details-modal #fs-close:hover,
+.view-details-modal #fs-close:focus {
+  transform: scale(1.05);
+  transition: transform 180ms ease;
+}
+
+/* two-column body: left image column + right details column */
+.view-details-modal .add-modal-middle {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  align-items: start;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+/* left column */
+.view-details-modal .add-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* wrapper for image: defines height and cropping area */
+.view-details-modal .img-preview-wrap {
+  width: 100%;
+  height: 240px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: contain;
+}
+
+/* image should fill the wrapper (not be centered inline) */
+.view-details-modal .img-preview {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* fills and crops to fit */
+}
+
+/* keep placeholder styling if no image */
+.view-details-modal .img-placeholder {
+  padding: 18px;
+  color: #6b7280;
+  text-align: center;
+}
+
+/* right column */
+.view-details-modal .view-right,
+.view-details-modal .modal-body2 {
+  display: flex;
+  flex-direction: column;
+}
+
+.view-details-modal .view-right p,
+.view-details-modal .modal-body2 p {
+  margin: 0;
+  text-align: left;
+  color: #222;
+}
+
+/* headings / dividers */
+.view-details-modal h3 {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    font-weight: 600;
+    color: #000000;
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+}
+
+h3::before,
+  h3::after {
+    content: "";
+    flex: 1;
+    border-bottom: 1px solid #ccc;
+  }
+  h3::before {
+    margin-right: 10px;
+  }
+  h3::after {
+    margin-left: 10px;
+  }
+
+  .divider-line {
+  border: none;
+  border-bottom: 1px solid #ccc;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+/* actions area */
+.view-details-modal .view-actions > button {
+    background: #8B0000;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    margin-right: .5rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    color: #ffffff;
+    letter-spacing: 2px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    &:hover {
+        scale: 1.05;
+        transition: all .5s ease;
+    }
+}
+
+/* Neat, responsive flex/grid layout for #form-claim */
+#form-claim {
+  display: grid;
+  grid-template-columns: 1fr 0;
+  padding: 12px;
+  box-sizing: border-box;
+  align-items: start;
+  width: 100%;
+    gap: 12px 16px;
+}
+
+  .modal-header-centered {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(100deg, #ffffff 0%, #8B0000 50%);
+    padding: 0rem;
+    border-radius: 50px;
+    color: white;
+    width: 600px;
+  }
+  .modal-logo {
+    height: 20px;
+    align-self: center;
+    margin-right: 1rem;
+    flex: 0;
+    align-items: center;
+  }
+  h2 {
+    flex: 1;
+    text-align: center;
+    text-transform: uppercase;
+  }
+    #btn-cancel-claim, #btn-cancel-found, #btn-cancel-false {
+    background-color: white;
+    color: #8B0000;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    margin-right: .5rem;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    &:hover {
+        scale: 1.05;
+        transition: all .5s ease;
+    }
+}
+
+/* Headline / intro spans both columns */
+#form-claim > p {
+  grid-column: 1 / -1;
+  margin: 0 0 6px;
+  font-weight: 700;
+  color: #111;
+  text-align: center;
+}
+
+/* Default label layout (stacked field label + control) */
+#form-claim label {
+  display: flex;
+  flex-direction: column;
+  font-weight: bold;
+  color: #111;
+}
+
+/* Inline checkbox labels: keep checkbox and text on one line */
+#form-claim label > input[type="checkbox"] {
+  align-self: center;
+}
+
+/* Make checkbox labels appear inline (modern browsers) */
+#form-claim label:has(input[type="checkbox"]) {
+  flex-direction: row;
+  align-items: center;
+}
+
+/* Controls styling */
+#form-claim input[type="text"],
+#form-claim input[type="date"],
+#form-claim input[type="tel"],
+#form-claim input:not([type="checkbox"]),
+#form-claim select,
+#form-claim textarea {
+  padding: 5px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  width: 100%;
+  color: #111;
+  box-sizing: border-box;
+}
+
+/* textarea sizing */
+#form-claim textarea { min-height: 92px; resize: vertical; }
+
+/* ID / Contact fields sit side-by-side on larger screens */
+#form-claim label:nth-of-type(3),
+#form-claim label:nth-of-type(4) {
+  /* these target "ID Number" and "Contact Info" positions in the form structure */
+}
+
+/* Actions row spans both columns and aligns to right */
+#form-claim > div:last-of-type {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+/* Buttons */
+#form-claim button, #form-report-found button, #form-false-claim button {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  background: #8B0000;
+  color: #fff;
+  width: 100%;
+}
+#form-claim button[type="button"] {
+  background: #f3f4f6;
+  color: #111;
+}
+
+/* Focus accessibility */
+#form-claim input:focus,
+#form-claim select:focus,
+#form-claim textarea:focus,
+#form-claim button:focus {
+  outline: 3px solid rgba(139,0,0,0.12);
+  outline-offset: 2px;
+}
+
+/* Report Found form: tidy flex/grid layout (mirrors #form-claim) */
+#form-report-found {
+  display: grid;
+  grid-template-columns: 1fr 0;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+#form-report-found > p {
+  grid-column: 1 / -1;
+  margin: 0 0 6px;
+  font-weight: 700;
+  color: #111;
+  text-align: center;
+}
+
+#form-report-found label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 600;
+  color: #111;
+  padding-bottom: 4px;
+}
+
+/* When a label contains a checkbox, lay it out inline */
+#form-report-found label:has(input[type="checkbox"]) {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Control styles */
+#form-report-found input[type="text"],
+#form-report-found input[type="date"],
+#form-report-found input[type="tel"],
+#form-report-found input:not([type="checkbox"]),
+#form-report-found select,
+#form-report-found textarea {
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  width: 100%;
+  font-size: 0.95rem;
+  color: #111;
+  box-sizing: border-box;
+}
+
+#form-report-found textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+/* Actions row spans both columns and aligns right */
+#form-report-found .form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* Buttons */
+#form-report-found button {
+  padding: 8px 14px;
+  border-radius: 50px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#form-report-found button[type="submit"] {
+  background: #8B0000;
+  color: #fff;
+}
+
+#form-report-found button[type="button"] {
+  background: #f3f4f6;
+  color: #111;
+}
+
+/* Cancel button id used in markup */
+#btn-cancel-found {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fff;
+  color: #8B0000;
+  border: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer;
+}
+
+/* Focus outlines for accessibility */
+#form-report-found input:focus,
+#form-report-found select:focus,
+#form-report-found textarea:focus,
+#form-report-found button:focus {
+  outline: 3px solid rgba(139,0,0,0.12);
+  outline-offset: 2px;
+}
+
+/* Report False Claim form: same layout as #form-claim and #form-report-found */
+#form-false-claim {
+  display: grid;
+  grid-template-columns: 1fr 0;
+  gap: 12px;
+  padding: 12px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+#form-false-claim > p {
+  grid-column: 1 / -1;
+  margin: 0 0 6px;
+  font-weight: 700;
+  color: #111;
+  text-align: center;
+}
+
+#form-false-claim label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  color: #111;
+}
+
+/* Inline checkbox row */
+#form-false-claim .checkbox-row {
+  display: flex;
+  align-items: center;
+}
+
+/* Controls */
+#form-false-claim input[type="text"],
+#form-false-claim input[type="email"],
+#form-false-claim input[type="tel"],
+#form-false-claim input[type="date"],
+#form-false-claim select,
+#form-false-claim textarea {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.12);
+  background: #fff;
+  width: 100%;
+  font-size: 0.95rem;
+  color: #111;
+  box-sizing: border-box;
+}
+
+#form-false-claim textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* Actions row spans both columns and aligns to right */
+#form-false-claim .form-actions,
+#form-false-claim > div.actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* Buttons */
+#form-false-claim button {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#form-false-claim button[type="submit"] {
+  background: #8B0000;
+  color: #fff;
+}
+
+#form-false-claim button[type="button"] {
+  background: #f3f4f6;
+  color: #111;
+}
+
+/* specific cancel id */
+#btn-cancel-false {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fff;
+  color: #8B0000;
+  border: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer;
+}
+
+/* Focus outlines */
+#form-false-claim input:focus,
+#form-false-claim select:focus,
+#form-false-claim textarea:focus,
+#form-false-claim button:focus {
+  outline: 3px solid rgba(139,0,0,0.12);
+  outline-offset: 2px;
+}
+
+/* Responsive: single column on small screens */
+@media (max-width: 720px) {
+  #form-report-found {
+    grid-template-columns: 1fr;
+  }
+  #form-report-found .form-actions {
+    justify-content: center;
+  }
+  #form-false-claim {
+    grid-template-columns: 1fr;
+  }
+  #form-false-claim .form-actions { justify-content: center; }
+}
+
+/* reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .view-details-modal #fs-close { transition: none; transform: none; }
+}
+
+   .modal-header-centered {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(100deg, #ffffff 0%, #8B0000 50%);
+    padding: 1rem;
+    border-radius: 50px;
+    color: white;
+    width: 1000px;
+    }
+    .modal-logo {
+      height: 40px;
+      align-self: flex-start;
+      margin-right: 1rem;
+      flex: 0;
+    }
+    h1 {
+      margin: 0;
+      flex: 1;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+      .modal-header-actions > button {
+      background-color: white;
+      color: #8B0000;
+      border: none;
+      padding: 0.5rem 1.5rem;
+      margin-right: .5rem;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      &:hover {
+          scale: 1.05;
+          transition: all .5s ease;
+      }
+}
+/* --- LAYOUT --- */
+#fs-form-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px; /* Space between Left Column and Right Column */
+  padding: 10px;
+}
+
+/* --- LEFT COLUMN --- */
+.left-side-add {
+  flex: 0 0 400px;
+  display: flex;
+  flex-direction: column;
+
+}
+
+/* --- IMAGE BOX --- */
+.img-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 250px;
+  border: 2px dashed #ccc;
+  background-color: #f9f9f9;
+  cursor: pointer;
+}
+
+.img-dropzone:hover {
+  border-color: #007bff;
+  background-color: #f0f8ff;
+}
+
+/* --- CHECKBOX AREA --- */
+.modal-body2 {
+  display: flex;
+  flex-direction: column;
+  /* No extra padding-top, so it sits right below */
+}
+
+.modal-body2 label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* --- RIGHT COLUMN --- */
+.right-side-add {
+  flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+    justify-content: space-between;
+}
+
+.right-side-add input, 
+.right-side-add select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.right-side-add h4 {
+  text-align: left;
+}
+
+/* Make form labels inline (Label: [control]) using flex.
+   Applies to add-listing and the other claim/report forms.
+   Falls back to stacked layout on small screens. */
+.add-listing-modal .add-right label,
+.add-listing-modal .fieldset-row label,
+.add-listing-modal .bottom-fieldset label,
+.right-side-add label,
+.left-side-add .modal-body2 label,
+#fs-form-add .right-side-add label,
+#form-claim label,
+#form-report-found label,
+#form-false-claim label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+  font-weight: 600;
+  color: #111;
+}
+
+/* Make the form control take remaining space */
+.add-listing-modal .add-right label > input,
+.add-listing-modal .add-right label > select,
+.add-listing-modal .add-right label > textarea,
+.add-listing-modal .fieldset-row label > input,
+.add-listing-modal .fieldset-row label > select,
+.right-side-add label > input,
+.right-side-add label > select,
+#fs-form-add .right-side-add label > input,
+#fs-form-add .right-side-add label > select,
+#form-claim label > input,
+#form-claim label > select,
+#form-report-found label > input,
+#form-report-found label > select,
+#form-false-claim label > input,
+#form-false-claim label > select {
+  flex: 1 1 auto;
+  min-width: 0; /* prevent overflow in flex */
+  width: auto;
+}
+
+/* Keep checkboxes inline but compact (label text then checkbox) */
+#form-claim label:has(input[type="checkbox"]),
+#form-report-found label:has(input[type="checkbox"]),
+#form-false-claim label:has(input[type="checkbox"]),
+.left-side-add .modal-body2 label {
+  align-items: flex-start;
+}
+
+/* Small screen: revert to stacked labels for readability */
+@media (max-width: 720px) {
+  .add-listing-modal .add-right label,
+  .add-listing-modal .fieldset-row label,
+  .add-listing-modal .bottom-fieldset label,
+  .right-side-add label,
+  .left-side-add .modal-body2 label,
+  #fs-form-add .right-side-add label,
+  #form-claim label,
+  #form-report-found label,
+  #form-false-claim label {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .add-listing-modal .add-right label > input,
+  .add-listing-modal .add-right label > select,
+  .right-side-add label > input,
+  .right-side-add label > select,
+  #form-claim label > input,
+  #form-claim label > select,
+  #form-report-found label > input,
+  #form-report-found label > select {
+    width: 100%;
+  }
+}

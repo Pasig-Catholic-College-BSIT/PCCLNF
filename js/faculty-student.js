@@ -89,7 +89,7 @@ function renderCard(item, kind){
   }
 
   const imgHtml = src
-    ? `<div class="img"><img src="${src}" alt="image" style="max-width:100%;max-height:160px;object-fit:cover;justify-content:center" onerror="this.style.display='none';this.parentNode.innerHTML='<div style=&quot;width:100%;height:160px;background:#eee;display:flex;align-items:center;justify-content:center;color:#777&quot;>No Image</div>'"></div>`
+    ? `<div class="img"><img src="${src}" alt="image" onerror="this.style.display='none';this.parentNode.innerHTML='<div style=&quot;width:100%;height:160px;background:#eee;display:flex;align-items:center;justify-content:center;color:#777&quot;>No Image</div>'"></div>`
     : `<div class="img">No Image</div>`;
 
   const dateLabel = kind === 'found' ? (item.dateFound || item.postedAt) : (item.dateLost || item.postedAt);
@@ -98,16 +98,16 @@ function renderCard(item, kind){
   const status = item.status || (kind === 'found' ? 'Unclaimed' : 'Unclaimed');
   const idAttr = item.id || '';
   return `
-    <div class="card" style="width:300px;border:1px solid #ddd;border-radius:6px;background:#fff;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.04)" data-kind="${kind}" data-id="${idAttr}" data-pid="${item._pid || ''}">
-      <div style="padding:.5rem;background:#f4f6fb;font-weight:600">${header}</div>
+    <div class="card" data-kind="${kind}" data-id="${idAttr}" data-pid="${item._pid || ''}">
+      <div class="card-header">${header}</div>
       ${imgHtml}
-      <div style="padding:.6rem;font-size:.9rem;line-height:1.4">
+      <div class="card-body">
         <div><strong>${kind === 'found' ? 'Date Found' : 'Date Lost'}:</strong> ${dateLabel ? formatDateOnly(dateLabel) : '—'}</div>
         <div><strong>${kind === 'found' ? 'Found At' : 'Last Seen At'}:</strong> ${location}</div>
         ${ kind === 'found' ? `<div><strong>Stored At:</strong> ${item.storedAt || '—'}</div>` : '' }
         <div><strong>Status:</strong> ${status}</div>
         <div><strong>Date Posted:</strong> ${posted}</div>
-        <div style="margin-top:.6rem;text-align:right">
+        <div>
           <button class="btn-view" data-kind="${kind}" data-id="${idAttr}" data-pid="${item._pid || ''}">View Details</button>
         </div>
       </div>
@@ -191,51 +191,90 @@ function openViewDetails(kind, id){
   }
   if (!item) {
     console.warn('openViewDetails: item not found', { kind, id });
-    return; // fail silently (no alert)
+    return;
   }
 
-  // build actions depending on context
+  // robust image source resolution
+  let imgSrc = '';
+  if (item && item.image) {
+    if (typeof item.image === 'string') {
+      if (item.image.startsWith('data:') || item.image.startsWith('http://') || item.image.startsWith('https://') || item.image.startsWith('/')) {
+        imgSrc = item.image;
+      } else {
+        imgSrc = `../images/${item.image}`;
+      }
+    } else if (item.image && typeof item.image === 'object') {
+      imgSrc = item.image.url || item.image.src || '';
+    }
+  }
+
+  // action buttons
   const actions = [];
-  // If item exists in found collection or has __kind 'found' => allow Claim Item
-  const isFound = (kind === 'found') || (item.__kind === 'found') || (item.status && (item.status.toLowerCase() === 'unclaimed' || item.status.toLowerCase().includes('found')));
-  if (isFound && !(kind === 'claimed')) actions.push(`<button id="btn-claim">Claim Item</button>`);
-  // If item exists in lost collection or __kind 'lost' => allow Report Found Item
+  const isFound = (kind === 'found') || (item.__kind === 'found') || (item.status && item.status.toLowerCase().includes('found'));
+  if (isFound && !(kind === 'claimed')) actions.push(`<button id="btn-claim" type="button">Claim Item</button>`);
   const isLost = (kind === 'lost') || (item.__kind === 'lost');
-  if (isLost && !(kind === 'claimed')) actions.push(`<button id="btn-report-found">I Have the Lost Item</button>`);
-  // If item is claimed (in claimed collection) allow report false claim
+  if (isLost && !(kind === 'claimed')) actions.push(`<button id="btn-report-found" type="button">I Have the Lost Item</button>`);
   const isClaimed = (kind === 'claimed') || (item.status && item.status.toLowerCase() === 'claimed');
-  if (isClaimed) actions.push(`<button id="btn-report-false">Report False Claim</button>`);
+  if (isClaimed) actions.push(`<button id="btn-report-false" type="button">Report False Claim</button>`);
+
+  const imgHtml = imgSrc
+    ? `<div class="img-preview-wrap"><img id="view-image" class="img-preview" src="${imgSrc}" alt="item image" onerror="this.remove(); this.parentNode.innerHTML='<div class=&quot;img-placeholder&quot;>No image available</div>'"></div>`
+    : `<div class="img-preview-wrap"><div class="img-placeholder">No image available</div></div>`;
 
   const html = `
-    <h3>Details</h3>
-    <div style="display:flex;gap:1rem;flex-wrap:wrap">
-      <div style="flex:1;min-width:260px">
-        ${ item.image && typeof item.image === 'string' && item.image.startsWith('data:') ? `<img src="${item.image}" style="width:100%;max-height:360px;object-fit:cover">` : '<div style="width:100%;height:220px;background:#eee;display:flex;align-items:center;justify-content:center">No Image</div>' }
-      </div>
-      <div style="flex:1;min-width:260px;text-align:left">
-        <p><strong>Category:</strong> ${item.category || '—'}</p>
-        <p><strong>Type:</strong> ${item.type || '—'}</p>
-        <p><strong>Brand/Model:</strong> ${item.brand || '—'}</p>
-        <p><strong>Color:</strong> ${item.color || '—'}</p>
-        <p><strong>Accessories/Contents:</strong> ${item.accessories || '—'}</p>
-        <p><strong>Condition:</strong> ${item.condition || '—'}</p>
-        <p><strong>Serial/Unique Mark:</strong> ${item.serial || '—'}</p>
-        <p><strong>${item.locationFound ? 'Found At' : 'Lost/Last Seen At'}:</strong> ${item.locationFound || item.locationLost || '—'}</p>
-        <p><strong>Date ${item.dateFound ? 'Found' : 'Lost'}:</strong> ${formatDateOnly(item.dateFound || item.dateLost)}</p>
-        <p><strong>Status:</strong> ${item.status || 'Pending'}</p>
-        <p><strong>Reporter/Finder:</strong> ${item.reporter || item.foundBy || '—'}</p>
-        <p><strong>Stored At / Claimed From:</strong> ${item.storedAt || item.claimedFrom || '—'}</p>
-        <p><strong>Remarks:</strong> ${item.remarks || '—'}</p>
-        <div style="margin-top:1rem;text-align:right">
-          ${actions.join(' ')}
-          <button id="fs-close">Close</button>
+    <div class="view-details-modal" role="dialog" aria-modal="true" aria-labelledby="view-details-title">
+      <header class="modal-header-centered">
+        <img class="modal-logo" src="../images/pcclogo.png" alt="logo">
+        <h1 id="view-details-title">Details</h1>
+        <div class="modal-header-actions">
+          <button id="fs-close" type="button" aria-label="Close">Close</button>
         </div>
+      </header>
+
+      <div class="add-modal-middle">
+        <aside class="add-left">
+          ${imgHtml}
+          <div class="modal-body2">
+            <h3>Status Info</h3>
+            <p><strong>Status:</strong> ${ item.status || '—' }</p>
+            <p><strong>Posted:</strong> ${ formatDateOnly(item.postedAt || item.createdAt) }</p>
+            <p><strong>Last Updated:</strong> ${ formatDateOnly(item.lastUpdated) }</p>
+          </div>
+            <div class="view-actions">${actions.join(' ')}</div>
+        </aside>
+
+        <section class="view-right">
+          <div class="modal-body">
+            <h3>Item Details</h3>
+            <p><strong>Category:</strong> ${ item.category || '—' }</p>
+            <p><strong>Type:</strong> ${ item.type || '—' }</p>
+            <p><strong>Brand / Model:</strong> ${ item.brand || '—' }</p>
+            <p><strong>Color:</strong> ${ item.color || '—' }</p>
+            <p><strong>Accessories / Contents:</strong> ${ item.accessories || '—' }</p>
+            <p><strong>Condition:</strong> ${ item.condition || '—' }</p>
+            <p><strong>Serial / Unique Mark:</strong> ${ item.serial || '—' }</p>
+
+            <h3>Discovery Info</h3>
+            <p><strong>Report Type:</strong> ${ (item.reportAs || kind || '').toUpperCase() }</p>
+            <p><strong>Reported By:</strong> ${ item.reporter || item.foundBy || '—' }</p>
+            <p><strong>Contact:</strong> ${ item.contact || '—' }</p>
+            <p><strong>Location Found / Lost:</strong> ${ item.locationFound || item.locationLost || '—' }</p>
+            <p><strong>Date Found / Lost:</strong> ${ formatDateOnly(item.dateFound || item.dateLost) }</p>
+            <p><strong>Currently Stored At / Last Seen At:</strong> ${ item.storedAt || item.locationLost || '—' }</p>
+
+
+            <h3>Claim Information</h3>
+            <p><strong>Claimed By:</strong> ${ item.claimedBy || '—' }</p>
+            <p><strong>Claimed Date:</strong> ${ item.claimedAt ? formatDateOnly(item.claimedAt) : '—' }</p>
+            <hr class="divider-line">
+          </div>
+        </section>
       </div>
     </div>
   `;
   openModal(html);
 
-  // wire action buttons inside modal
+  // wire actions
   q('#fs-close')?.addEventListener('click', closeModal);
   q('#btn-claim')?.addEventListener('click', ()=> openClaimForm(item, kind));
   q('#btn-report-found')?.addEventListener('click', ()=> openReportFoundForm(item, kind));
@@ -245,8 +284,15 @@ function openViewDetails(kind, id){
 // Claim form modal
 function openClaimForm(item, kind){
   const html = `
-    <h3>Claim Item</h3>
-    <form id="form-claim">
+      <header class="modal-header-centered">
+        <img class="modal-logo" src="../images/pcclogo.png" alt="logo">
+        <h1 id="view-details-title">CLAIM FORM</h1>
+        <div class="modal-header-actions">
+        <button type="button" id="btn-cancel-claim">Cancel</button>
+        </div>
+      </header> 
+      
+      <form id="form-claim">
       <p>Claiming item: <strong>${item.type || item.category || 'Item'}</strong></p>
       <label>Full Name: <input name="name" required></label><br>
       <label>Role:
@@ -261,7 +307,6 @@ function openClaimForm(item, kind){
       <label><input type="checkbox" name="declaration" required> I certify I am the rightful owner and information is true.</label><br>
       <div style="text-align:right;margin-top:.6rem">
         <button type="submit">Submit Claim Request</button>
-        <button type="button" id="btn-cancel-claim">Cancel</button>
       </div>
     </form>
   `;
@@ -281,8 +326,15 @@ function openClaimForm(item, kind){
 // Report Found form modal
 function openReportFoundForm(item, kind){
   const html = `
-    <h3>Report Found Item</h3>
-    <form id="form-report-found">
+      <header class="modal-header-centered">
+        <img class="modal-logo" src="../images/pcclogo.png" alt="logo">
+        <h1 id="view-details-title">REPORT FOUND FORM</h1>
+        <div class="modal-header-actions">
+        <button type="button" id="btn-cancel-found">Cancel</button>
+        </div>
+      </header> 
+      
+      <form id="form-report-found">
       <p>Reporting found for item: <strong>${item.type || item.category || 'Item'}</strong></p>
       <label>Full Name: <input name="name" required></label><br>
       <label>Role:
@@ -299,7 +351,6 @@ function openReportFoundForm(item, kind){
       <label><input type="checkbox" name="declaration" required> I confirm I found this item and will surrender it.</label><br>
       <div style="text-align:right;margin-top:.6rem">
         <button type="submit">Submit Found Report</button>
-        <button type="button" id="btn-cancel-found">Cancel</button>
       </div>
     </form>
   `;
@@ -319,8 +370,15 @@ function openReportFoundForm(item, kind){
 // Report False Claim form modal
 function openFalseClaimForm(item, kind){
   const html = `
-    <h3>Report False Claim</h3>
-    <form id="form-false-claim">
+      <header class="modal-header-centered">
+        <img class="modal-logo" src="../images/pcclogo.png" alt="logo">
+        <h1 id="view-details-title">FALSE CLAIM FORM</h1>
+        <div class="modal-header-actions">
+        <button type="button" id="btn-cancel-false">Cancel</button>
+        </div>
+      </header>
+      
+      <form id="form-false-claim">
       <p>Reporting false claim on: <strong>${item.type || item.category || 'Item'}</strong></p>
       <label>Your Name: <input name="name" required></label><br>
       <label>Contact Info: <input name="contact"></label><br>
@@ -328,7 +386,6 @@ function openFalseClaimForm(item, kind){
       <label><input type="checkbox" name="declaration" required> I request admin review and believe this claim is false.</label><br>
       <div style="text-align:right;margin-top:.6rem">
         <button type="submit">Submit Report</button>
-        <button type="button" id="btn-cancel-false">Cancel</button>
       </div>
     </form>
   `;
@@ -346,15 +403,36 @@ function openFalseClaimForm(item, kind){
 }
 
 function openAddListingModal(){
-  // reuse previous form markup
   openModal(`
-    <h3>Add Listing</h3>
-    <form id="fs-form-add">
+      <header class="modal-header-centered">
+        <img class="modal-logo" src="../images/pcclogo.png" alt="logo">
+        <h1 id="view-details-title">ADD LISTING</h1>
+        <div class="modal-header-actions">
+          <button type="button" id="fs-submit-header">Submit Listing</button>
+          <button id="fs-close" type="button" aria-label="Close">Close</button>
+        </div>
+      </header>
+
+      <form id="fs-form-add">
+      <div class="left-side-add">
+            <label class="img-dropzone" id="img-dropzone" tabindex="0" aria-label="Drop image here or click to choose">
+              <input type="file" id="image-file" name="imageFile" accept="image/*" style="display:none">
+              <div class="img-placeholder" id="img-placeholder">
+                <div class="img-instructions">
+                  <div>'Attach image'}</div>
+                  <div>'Click or drop an image here. Optional but recommended.'}</div>
+                </div>
+              </div>
+      </label><div class="modal-body2">
+        <label><input type="checkbox" id="fs-confirm-false" required> I understand false or misleading reports may result in suspension.</label><br>
+        <label><input type="checkbox" id="fs-confirm-public" required> I consent to my report being reviewed and made public once approved by an administrator.</label>
+      </div>
+      </div>
+
+      <div class="right-side-add">
       <div>
-        <label>Report as:
-          <label><input type="radio" name="reportAs" value="lost" checked> LOST</label>
-          <label><input type="radio" name="reportAs" value="found"> FOUND</label>
-        </label>
+          <label><input type="radio" name="reportAs" value="lost" checked> REPORT AS LOST</label>
+          <label><input type="radio" name="reportAs" value="found"> REPORT AS FOUND</label>
       </div>
       <div>
         <label>Category:
@@ -370,7 +448,7 @@ function openAddListingModal(){
         <label>Type: <input name="type" required></label><br>
         <label>Brand / Model: <input name="brand"></label><br>
         <label>Color: <input name="color"></label><br>
-        <label>Accessories / Contents: <input name="accessories"></label><br>
+        <label>Contents: <input name="accessories"></label><br>
         <label>Condition:
           <select name="condition">
             <option>Brand New</option>
@@ -379,45 +457,48 @@ function openAddListingModal(){
             <option>Damaged</option>
           </select>
         </label><br>
-        <label>Serial / Unique Mark: <input name="serial"></label><br>
+        <label>Unique Mark: <input name="serial"></label><br>
       </div>
       <div id="fs-lost-fields">
-        <h4>If LOST</h4>
+        <h4>LOST REPORTER FORM</h4>
         <label>Lost At: <input name="locationLost"></label><br>
         <label>Date Lost: <input name="dateLost" type="date"></label><br>
         <label>Reporter Name: <input name="reporter"></label><br>
         <label>Contact Info: <input name="contact"></label><br>
       </div>
       <div id="fs-found-fields" style="display:none">
-        <h4>If FOUND</h4>
+        <h4>FOUND REPORTER FORM</h4>
         <label>Found At: <input name="locationFound"></label><br>
         <label>Date Found: <input name="dateFound" type="date"></label><br>
         <label>Found By: <input name="foundBy"></label><br>
         <label>Currently Stored At: <input name="storedAt"></label><br>
       </div>
-      <div style="margin-top:.6rem">
-        <label>Image (optional): <input type="file" id="fs-file-image"></label><br>
-      </div>
-      <div style="margin-top:.6rem">
-        <label><input type="checkbox" id="fs-confirm-false" required> I understand false or misleading reports may result in suspension.</label><br>
-        <label><input type="checkbox" id="fs-confirm-public" required> I consent to my report being reviewed and made public once approved by an administrator.</label>
-      </div>
-      <div style="text-align:right;margin-top:.6rem">
-        <button type="submit">Confirm Submission</button>
-        <button type="button" id="fs-btn-cancel">Cancel</button>
       </div>
     </form>
   `);
 
+  // toggle lost/found sections
   qa('input[name="reportAs"]').forEach(r => r.addEventListener('change', () => {
     const v = q('input[name="reportAs"]:checked')?.value || 'lost';
     q('#fs-lost-fields').style.display = v === 'lost' ? '' : 'none';
     q('#fs-found-fields').style.display = v === 'found' ? '' : 'none';
   }));
 
-  q('#fs-btn-cancel')?.addEventListener('click', closeModal);
+  // corrected cancel wiring (id used in markup is #fs-close)
+  q('#fs-close')?.addEventListener('click', closeModal);
 
+  // wire header submit button to the form (submit button sits outside the form in header)
   const form = q('#fs-form-add');
+  const headerSubmit = q('#fs-submit-header');
+  if (headerSubmit && form) {
+    headerSubmit.addEventListener('click', () => {
+      // prefer requestSubmit to trigger HTML validation; fallback to submit()
+      if (typeof form.requestSubmit === 'function') form.requestSubmit();
+      else form.dispatchEvent(new Event('submit', { cancelable: true }));
+    });
+  }
+
+  // form submit handler (unchanged)
   form?.addEventListener('submit', (ev)=>{
     ev.preventDefault();
     const fd = new FormData(form);

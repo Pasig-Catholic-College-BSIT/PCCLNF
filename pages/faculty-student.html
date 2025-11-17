@@ -7,6 +7,8 @@
   <link rel="icon" href="../images/redpaul.png" type="image/png">
 
   <link rel="stylesheet" href="../css/faculty-student.css" />
+  <link rel="stylesheet" href="../css/usersidemodals.css" />
+  
 </head>
 <body>
   <header>
@@ -45,18 +47,19 @@
 
   <main style="margin-top:1rem;">
     <h2 id="h2">Reported Lost and Found Items</h2>
-    <div id="cards-items" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
+    <div id="cards-items"></div>
 
     <h2>Claimed Items</h2>
-    <div id="cards-claimed" style="display:flex;flex-wrap:wrap;gap:1rem;"></div>
+    <div id="cards-claimed"></div>
   </main>
 
   <!-- modal overlay -->
   <div id="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.3); z-index:1000;">
-    <div id="modal" style="background:#fff; width:min(760px,96%); margin:3rem auto; padding:1rem; border-radius:6px; max-height:80vh; overflow:auto;">
+    <div id="modal" style="background:#fff; margin:3rem auto; padding:1rem;">
     </div>
   </div>
 
   <script src="../js/faculty-student.js" defer></script>
+  <script src="../js/admin.js" defer></script>
 </body>
 </html>
