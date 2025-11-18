@@ -245,19 +245,22 @@ h3::before,
 #form-claim label {
   display: flex;
   flex-direction: column;
+  gap: 6px;
   font-weight: bold;
   color: #111;
 }
 
 /* Inline checkbox labels: keep checkbox and text on one line */
 #form-claim label > input[type="checkbox"] {
-  align-self: center;
-}
+align-content: center;}
 
 /* Make checkbox labels appear inline (modern browsers) */
 #form-claim label:has(input[type="checkbox"]) {
+width: 500px;
   flex-direction: row;
   align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
 }
 
 /* Controls styling */
@@ -722,4 +725,24 @@ h3::before,
   #form-report-found label > select {
     width: 100%;
   }
+}
+
+
+.view-details-modal {
+  .view-right {
+    h3 {
+      font-size: 2rem;
+    }
+    .btn-secondary {
+      padding: 12px 24px;
+      font-size: 1.2rem;
+      justify-content: center;
+      align-items: center;
+    }
+  }
+}
+
+.qr-button {
+  text-align: center;
+  justify-content: center;
 }
