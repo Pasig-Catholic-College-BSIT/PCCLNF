@@ -330,7 +330,7 @@ function openAddListingModal(prefill = null) {
       <div class="modal-header modal-header-centered">
         <img class="modal-logo" src="../images/pcclogo.png" alt="logo" /><h1>${title}</h1>
           <div>
-          <button type="submit" class="btn-primary">${prefill ? 'Save Changes' : 'Submit Listing'}</button>
+          <button type="button" id="submit-listing" class="btn-primary">${prefill ? 'Save Changes' : 'Submit Listing'}</button>
           <button type="button" id="cancel" class="btn-secondary">Cancel</button>
           </div>
       </div>
@@ -538,6 +538,18 @@ function openAddListingModal(prefill = null) {
   }
 
   const frm = q('#form-add');
+  // wire header submit button to the form so clicks trigger the form submit handler
+  const submitBtn = q('#submit-listing');
+  if (submitBtn && frm) {
+    submitBtn.addEventListener('click', () => {
+      if (typeof frm.requestSubmit === 'function') {
+        frm.requestSubmit();
+      } else {
+        // fallback for older browsers
+        frm.dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}));
+      }
+    });
+  }
   function toggleFields() {
     if (!frm) return;
     const val = frm.reportAs.value;
